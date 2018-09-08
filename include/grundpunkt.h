@@ -23,11 +23,6 @@
 using namespace std::string_literals; 
 using TRenderer=Cairo::RefPtr<Cairo::Context>;
 
-struct SLineD
-    {
-    double x1{0}, y1{0};
-    double x2{0}, y2{0};
-    };
 
 struct SPointD
     {
@@ -63,7 +58,7 @@ using VPolDreieck  = std::vector<SPointD>;
 using VGelenke     = std::vector<SPointD>;
 using A3Gelenke    = std::array<SPointD, 3>;
 
-SLineD FixedLenLine(SLineD & roL, double const & crnLenEbene, bool const & crbFirst = true)
+SEbeneD FixedLenLine(SEbeneD & roL, double const & crnLenEbene, bool const & crbFirst = true)
     {
     double const dx   = roL.x1 - roL.x2;
     double const dy   = roL.y1 - roL.y2;

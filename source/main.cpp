@@ -2,25 +2,22 @@
 #include <gtkmm/application.h>
 #include <gtkmm/window.h>
 
-static gboolean time_handler(GtkWidget *widget)
-{
-  gtk_widget_queue_draw(widget);
-
-  return TRUE;
-}
 
 int main(int argc, char** argv)
 {
-   auto app = Gtk::Application::create(argc, argv, "org.gtkmm.example");
 
-   Gtk::Window win;
-   win.resize(800,600);
-   win.set_title("3-Lagen Synthese");
+    auto app = Gtk::Application::create(argc, argv, "org.gtkmm.3lsynth");
 
-   CCanvas area;
-   win.add(area);
-   area.show();
+    Gtk::Window window;
+    window.resize(800,600);
+    window.set_title("3-Lagen Synthese");
 
-   return app->run(win);
+    CCanvas area;
+    window.add(area);
+    area.show();
+
+    return app->run(window);
+
+    // ------------------------------------------------
+
 }
-
