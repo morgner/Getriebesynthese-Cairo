@@ -1,0 +1,9 @@
+set(SOURCE
+  ${SOURCE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/grundpunkt.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/canvas.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/te.h
+
+  PARENT_SCOPE
+  )
+
