@@ -223,7 +223,7 @@ bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
 			    y2=ey;
 			    if ( m_nLenEbene != 0.0 )
 				{
-				SLineD tL{true,x1,y1,x2,y2};
+				SLineD tL{x1,y1,x2,y2};
 				FixedLenLine(tL, m_nLenEbene);
 				x2 = tL.x2;
 				y2 = tL.y2;
@@ -335,8 +335,8 @@ void CCanvas::MoveEbenenPunkt(double const & x,double const & y,double const & L
     SEbeneD & er = g_vEbenenLagen[g_tCollision.nIndex];
 
     SLineD tL{};
-    if ( g_tCollision.nSubIx == 0 ) tL = {true,x,y,er.x2,er.y2};
-    if ( g_tCollision.nSubIx == 1 ) tL = {true,er.x1,er.y1,x,y};
+    if ( g_tCollision.nSubIx == 0 ) tL = {x,y,er.x2,er.y2};
+    if ( g_tCollision.nSubIx == 1 ) tL = {er.x1,er.y1,x,y};
     if ( g_tCollision.nSubIx == 2 )
 	{
 	SPointD m = er.M();

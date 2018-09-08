@@ -25,7 +25,6 @@ using TRenderer=Cairo::RefPtr<Cairo::Context>;
 
 struct SLineD
     {
-    bool   bHasP1{false};
     double x1{0}, y1{0};
     double x2{0}, y2{0};
     };
