@@ -46,12 +46,6 @@ struct SUmkreis
     SPoint MidPnt;
     };
 
-struct SCollision
-    {
-    int E; // 1,2,3 = E1, E2, E3
-    int P; // 1,2,3 = P1, P2, Pm
-    };
-
 
 using VEbenenLagen = std::vector<SEbene>;
 using VPolDreieck  = std::vector<SPoint>;
@@ -216,6 +210,8 @@ class CGrundpunkt
 
 	void Show( TRenderer const & cr, VPolDreieck const & Poldreieck)
 	    {
+	    cr->set_line_width(2); //!!
+
 	    // P123
 	    cr->set_source_rgba(0, .5, .5, 0.75);
 	    cr->arc(m_dX, m_dY, 8, 0, 2*M_PI);

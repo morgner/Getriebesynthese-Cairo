@@ -5,25 +5,25 @@
 
 VEbenenLagen    g_vEbenenLagen;// E1,  E2,  E3  = 3 homologe Lagen einer Ebene
 VPolDreieck     g_vPolDreieck; // P12, P13, P23 = 3 Polpunkte zu den o.g.Ebenenlagen
-SUmkreis       g_tUmkreis;
+SUmkreis        g_tUmkreis;
 VGelenke        g_vGelenke;
-SAllCollision   g_tCollision{SAllCollision::EWhat::none, 0, 0};
+SCollision      g_tCollision{SCollision::EWhat::none, 0, 0};
 CGrundpunkt     g_oGrundpunkt({-1, -1});
 VGrundpunkte    g_vGrundPunkte;
 
 double dScale  {1.0}; // scale
-bool   ti {false}; // t-initialized?
-double dTransX {0.0}; // translation x
-double dTransY {0.0}; // translation y
-double dTransXStart{0.0}; // translation x
-double dTransYStart{0.0}; // translation y
-double cx {0.0}; // mouse x
-double cy {0.0}; // mouse y
+bool   bTransInitialized {false}; // translation initialized?
+double dTransX {0.0}; // translation relativ pos
+double dTransY {0.0}; //
+double dTransXStart{0.0}; // translation start pos
+double dTransYStart{0.0}; //
+double dBaseMoveX {0.0}; // base pos for moving the canvas
+double dBaseMoveY {0.0}; //
 
-double dColliderMouseDistance{0.0}; // collider distance
+double dCollisonDistance{0.0}; // collision distance
 
-double dcdx{0}; // distance to a specified point
-double dcdy{0};
+double dCollisionOffsetX{0}; // distance to a specified point
+double dCollisionOffsetY{0};
 
 double dmosx{0}; // mouse offset scaled
 double dmosy{0};
@@ -36,46 +36,46 @@ template<typename A, typename B>
 
 double MouseDistance( SPoint const & p, SPoint const & pMouse )
     {
-    dcdx = (p.x - pMouse.x)*dScale;
-    dcdy = (p.y - pMouse.y)*dScale;
+    dCollisionOffsetX = (p.x - pMouse.x)*dScale;
+    dCollisionOffsetY = (p.y - pMouse.y)*dScale;
     return CalcDistance(p, pMouse);
     }
 
-SAllCollision MouseCollision(SPoint const & crtMousePoint)
+SCollision MouseCollision(SPoint const & crtMousePoint)
     {
-    SAllCollision ac;
-    ac.eWhat  = SAllCollision::EWhat::none;
+    SCollision ac;
+    ac.eWhat  = SCollision::EWhat::none;
     int cnt{0};
 
-    dColliderMouseDistance = 12.0;
+    dCollisonDistance = 12.0;
     for (auto const & a:g_vEbenenLagen)
 	{
-	if ( MouseDistance({a.x1, a.y1}, crtMousePoint) < dColliderMouseDistance )
+	if ( MouseDistance({a.x1, a.y1}, crtMousePoint) < dCollisonDistance )
 	    {
-	    ac.eWhat  = SAllCollision::EWhat::Ebene;
+	    ac.eWhat  = SCollision::EWhat::Ebene;
 	    ac.nIndex = cnt;
 	    ac.nSubIx = 0;
-	    dmosx = dcdx;
-	    dmosy = dcdy;
+	    dmosx = dCollisionOffsetX;
+	    dmosy = dCollisionOffsetY;
 	    break;
 	    }
-	if ( MouseDistance({a.x2, a.y2}, crtMousePoint) < dColliderMouseDistance )
+	if ( MouseDistance({a.x2, a.y2}, crtMousePoint) < dCollisonDistance )
 	    {
-	    ac.eWhat  = SAllCollision::EWhat::Ebene;
+	    ac.eWhat  = SCollision::EWhat::Ebene;
 	    ac.nIndex = cnt;
 	    ac.nSubIx = 1;
-	    dmosx = dcdx;
-	    dmosy = dcdy;
+	    dmosx = dCollisionOffsetX;
+	    dmosy = dCollisionOffsetY;
 	    break;
 	    }
 	SPoint m = a.M();
-	if ( MouseDistance({m.x, m.y}, crtMousePoint) < dColliderMouseDistance )
+	if ( MouseDistance({m.x, m.y}, crtMousePoint) < dCollisonDistance )
 	    {
-	    ac.eWhat  = SAllCollision::EWhat::Ebene;
+	    ac.eWhat  = SCollision::EWhat::Ebene;
 	    ac.nIndex = cnt;
 	    ac.nSubIx = 2;
-	    dmosx = dcdx;
-	    dmosy = dcdy;
+	    dmosx = dCollisionOffsetX;
+	    dmosy = dCollisionOffsetY;
 	    break;
 	    }
 	++cnt;
@@ -83,13 +83,13 @@ SAllCollision MouseCollision(SPoint const & crtMousePoint)
     cnt = 0;
     for (auto const & a:g_vGrundPunkte)
 	{
-	if ( MouseDistance( a.P123(), crtMousePoint) < dColliderMouseDistance )
+	if ( MouseDistance( a.P123(), crtMousePoint) < dCollisonDistance )
 	    {
-	    ac.eWhat  = SAllCollision::EWhat::Grundpunkt;
+	    ac.eWhat  = SCollision::EWhat::Grundpunkt;
 	    ac.nIndex = cnt;
 	    ac.nSubIx = 0;
-	    dmosx = dcdx;
-	    dmosy = dcdy;
+	    dmosx = dCollisionOffsetX;
+	    dmosy = dCollisionOffsetY;
 	    break;
 	    }
 	++cnt;
@@ -180,10 +180,10 @@ bool CCanvas::on_key_press_event(GdkEventKey* key_event)
 bool CCanvas::on_button_press_event(GdkEventButton *event)
     {
     auto const ex = event->x/dScale-dTransX/dScale;
-               cx = event->x;
+               dBaseMoveX = event->x;
                dTransXStart = dTransX;
     auto const ey = event->y/dScale-dTransY/dScale;
-               cy = event->y;
+               dBaseMoveY = event->y;
                dTransYStart = dTransY;
 
     if( (event->type == GDK_BUTTON_PRESS) && (event->button == 1) )
@@ -193,7 +193,7 @@ bool CCanvas::on_button_press_event(GdkEventButton *event)
             x1=x2=ex;
             y1=y2=ey;
             }
-        if (g_tCollision.eWhat == SAllCollision::EWhat::none)
+        if (g_tCollision.eWhat == SCollision::EWhat::none)
             {
 	    switch (m_ePhase)
 		{
@@ -223,7 +223,7 @@ bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
 	if ( event->state & GDK_BUTTON1_MASK )
 	    {
 	    switch (g_tCollision.eWhat)
-		case SAllCollision::EWhat::none:
+		case SCollision::EWhat::none:
 		    {
 		    switch (m_ePhase)
 			{
@@ -244,18 +244,18 @@ bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
 			    break;
 
 			default:
-			    dTransX = dTransXStart - (cx-event->x);
-			    dTransY = dTransYStart - (cy-event->y);
+			    dTransX = dTransXStart - (dBaseMoveX-event->x);
+			    dTransY = dTransYStart - (dBaseMoveY-event->y);
 			    break;
 			}
 		    break;
 
-		case SAllCollision::EWhat::Ebene:
+		case SCollision::EWhat::Ebene:
 		    MoveEbenenPunkt(ex+dmosx/dScale, ey+dmosy/dScale, m_nLenEbene);
 		    break;
 
-		case SAllCollision::EWhat::Grundpunkt:
-		    g_vGrundPunkte[g_tCollision.nIndex].Update({ex+dcdx/dScale, ey+dcdy/dScale});
+		case SCollision::EWhat::Grundpunkt:
+		    g_vGrundPunkte[g_tCollision.nIndex].Update({ex+dCollisionOffsetX/dScale, ey+dCollisionOffsetY/dScale});
 		    break;
 		}
 	    }
@@ -270,7 +270,7 @@ bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
 
 bool CCanvas::on_button_release_event(GdkEventButton* event)
     {
-    if (g_tCollision.eWhat == SAllCollision::EWhat::none)
+    if (g_tCollision.eWhat == SCollision::EWhat::none)
 	{
     if( (event->type == GDK_BUTTON_RELEASE) /*&& (event->button == 1)*/ )
 	{
@@ -392,16 +392,13 @@ void draw_text(Cairo::RefPtr<Cairo::Context> const & cr,
 void draw_ebene(Cairo::RefPtr<Cairo::Context> const & cr,
 	        SEbene const & croEbene, int nId)
     {
-    cr->save();
     cr->set_line_cap(Cairo::LINE_CAP_ROUND);
     cr->set_line_width(13);
     cr->set_source_rgb(1,0,0);
     cr->move_to(croEbene.x1,croEbene.y1);
     cr->line_to(croEbene.x2,croEbene.y2);
     cr->stroke();
-    cr->restore();
 
-    cr->save();
     cr->set_source_rgb(1,1,1);
     cr->arc(croEbene.x1,croEbene.y1,5,0,2*M_PI);
     cr->fill();
@@ -413,7 +410,6 @@ void draw_ebene(Cairo::RefPtr<Cairo::Context> const & cr,
     draw_text(cr,  croEbene.x2+12, croEbene.y2-12, "p2");
     draw_text(cr, (croEbene.x2+croEbene.x1)/2,
 	          (croEbene.y2+croEbene.y1)/2, "E"+std::to_string(nId));
-    cr->restore();
     }
 
 void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
@@ -425,7 +421,6 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
 
     std::string sId = std::array<std::string,5>{"U","A","B","C","E"}[(nId>4)?4:nId];
 
-    cr->save();
     cr->set_source_rgb(1,1,1);
     cr->arc(G0.x,G0.y,25,0,2*M_PI); cr->fill();
     cr->set_source_rgb(0,0,0);
@@ -441,13 +436,11 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
     cr->arc(G0.x,G0.y,25,M_PI,M_PI/2*3);
     cr->line_to(G0.x,G0.y);
     cr->fill();
-    cr->restore();
 
     for ( int i{0}; i<3; ++i)
 	{
 	SPoint const GPoint = croGP.GPoint(i);
 
-    	cr->save();
     	cr->set_line_cap(Cairo::LINE_CAP_ROUND);
     	cr->set_line_width( (i==0)?16:4);
     	cr->set_source_rgba(.5,.5,.5,.5);
@@ -459,7 +452,6 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
     	    cr->line_to(g_vGrundPunkte[0].GPoint(i).x,g_vGrundPunkte[0].GPoint(i).y);
     	    }
     	cr->stroke();
-    	cr->restore();
 
     	if (i==0)
     	    {
@@ -475,7 +467,6 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
 	{
 	SPoint const GPoint = croGP.GPoint(i);
 
-	cr->save();
 	cr->set_source_rgb(.8,.8,1);
 	cr->arc(GPoint.x,GPoint.y,10,0,2*M_PI);
 	cr->fill();
@@ -483,24 +474,18 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
 	cr->set_line_width(2);
 	cr->arc(GPoint.x,GPoint.y,10,0,2*M_PI);
 	cr->stroke();
-	cr->restore();
 
-    	cr->save();
     	cr->set_source_rgb(0,0,0);
     	draw_text(cr, GPoint.x,GPoint.y, sId+std::to_string(i+1));
-    	cr->restore();
 	}
-//--------------------------------
 
     cr->set_source_rgb(0,0,0);
     draw_text(cr, G0.x,G0.y-42, sId+"0");
-
     }
 
 void draw_dreieck(Cairo::RefPtr<Cairo::Context> const & cr,
 	          VPolDreieck const & croPD, int nId)
     {
-    cr->save();
     cr->set_line_cap(Cairo::LINE_CAP_ROUND);
     cr->set_line_width(13);
     cr->set_source_rgba(0,1,0,.5);
@@ -515,25 +500,20 @@ void draw_dreieck(Cairo::RefPtr<Cairo::Context> const & cr,
     cr->line_to(croPD[2].x,croPD[2].y);
     cr->line_to(croPD[0].x,croPD[0].y);
     cr->stroke();
-    cr->restore();
 
     SUmkreis tUmkreis = Umkreis( croPD[0], croPD[1], croPD[2] );
-    cr->save();
     cr->set_source_rgba(1,1,1,.25);
     cr->arc(tUmkreis.MidPnt.x,tUmkreis.MidPnt.y,tUmkreis.Radius,0,2*M_PI);
     cr->fill();
     cr->set_source_rgb(0,0,0);
     cr->arc(tUmkreis.MidPnt.x,tUmkreis.MidPnt.y,tUmkreis.Radius,0,2*M_PI);
     cr->stroke();
-    cr->restore();
 
-    cr->save();
     cr->set_source_rgb(0,0,0);
     draw_text(cr,  croPD[0].x,croPD[0].y, "P12");
     draw_text(cr,  croPD[1].x,croPD[1].y, "P13");
     draw_text(cr,  croPD[2].x,croPD[2].y, "P23");
     draw_text(cr,  croPD[0].x,croPD[0].y, "");
-    cr->restore();
     }
 
 bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
@@ -545,11 +525,11 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
     static auto w0 = width/2;
     static auto h0 = height/2;
 
-	if ( false == ti )
+	if ( false == bTransInitialized )
 	{
 	w0 = dTransX = width/2;
 	h0 = dTransY = height/2;
-	ti = true;
+	bTransInitialized = true;
 	}
     if ( (w0!=width/2) || (h0!=height/2) )
 	{
@@ -578,42 +558,40 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	}
 
 // interactive content
-    if ( g_tCollision.eWhat == SAllCollision::EWhat::Ebene )
+    if ( g_tCollision.eWhat == SCollision::EWhat::Ebene )
 	{
-	cr->save();
 	cr->set_source_rgb(.5,.5,0);
 	cr->set_line_width(11);
 	switch ( g_tCollision.nSubIx )
 	    {
 	    case 0:
 		cr->arc(g_vEbenenLagen[g_tCollision.nIndex].x1,
-			g_vEbenenLagen[g_tCollision.nIndex].y1,dColliderMouseDistance,0,2*M_PI);
+			g_vEbenenLagen[g_tCollision.nIndex].y1,dCollisonDistance,0,2*M_PI);
 		break;
 	    case 1:
 		cr->arc(g_vEbenenLagen[g_tCollision.nIndex].x2,
-			g_vEbenenLagen[g_tCollision.nIndex].y2,dColliderMouseDistance,0,2*M_PI);
+			g_vEbenenLagen[g_tCollision.nIndex].y2,dCollisonDistance,0,2*M_PI);
 		break;
 	    case 2:
 		cr->set_line_cap(Cairo::LINE_CAP_ROUND);
-		cr->set_line_width(dColliderMouseDistance*2);
+		cr->set_line_width(dCollisonDistance*2);
 		cr->move_to(g_vEbenenLagen[g_tCollision.nIndex].x1,g_vEbenenLagen[g_tCollision.nIndex].y1);
 		cr->line_to(g_vEbenenLagen[g_tCollision.nIndex].x2,g_vEbenenLagen[g_tCollision.nIndex].y2);
 		cr->stroke();
 		break;
 	    }
 	cr->fill();
-	cr->restore();
 	}
 
-    if ( g_tCollision.eWhat == SAllCollision::EWhat::Grundpunkt )
+    if ( g_tCollision.eWhat == SCollision::EWhat::Grundpunkt )
 	{
-	cr->save();
 	cr->set_source_rgb(.5,.5,0);
-	cr->set_line_width(11);
+//	cr->set_line_width(11);
+	cr->set_line_width(2);
+
 	cr->arc(g_vGrundPunkte[g_tCollision.nIndex].P123().x,
 		g_vGrundPunkte[g_tCollision.nIndex].P123().y, 21, 0, 2*M_PI);
 	cr->fill();
-	cr->restore();
 	}
 
     int n=0;
@@ -651,19 +629,15 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	    }
 	}
 /*
-    cr->save();
     cr->set_source_rgb(.8,.8,.0);
     cr->set_line_width(2);
     cr->arc(mx/s-tx/s, my/s-ty/s, 7/s,0,2*M_PI);
     cr->fill();
-    cr->restore();
 
-    cr->save();
     cr->set_source_rgb(.0,.8,.8);
     cr->set_line_width(2);
     cr->arc(-tx/s, -ty/s, 11/s,0,2*M_PI);
     cr->fill();
-    cr->restore();
 
     cr->set_source_rgb(0,0,0);
     cr->set_font_size(24.0/s);

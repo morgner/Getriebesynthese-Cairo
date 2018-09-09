@@ -6,7 +6,7 @@
 int main(int argc, char** argv)
 {
 
-    auto app = Gtk::Application::create(argc, argv, "org.gtkmm.3lsynth");
+    auto app = Gtk::Application::create(argc, argv, "org.gtkmm.l3synth");
 
     Gtk::Window window;
     window.resize(800,600);

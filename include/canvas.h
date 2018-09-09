@@ -3,7 +3,7 @@
 
 #include <gtkmm/drawingarea.h>
 
-struct SAllCollision
+struct SCollision
     {
     enum class EWhat {
 	none,
