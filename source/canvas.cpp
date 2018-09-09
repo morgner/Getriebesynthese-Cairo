@@ -421,6 +421,9 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
 
     std::string sId = std::array<std::string,5>{"U","A","B","C","E"}[(nId>4)?4:nId];
 
+    cr->set_source_rgb(0,0,0);
+    draw_text(cr, croGP.P123().x,croGP.P123().y+27, sId+"123");
+
     cr->set_source_rgb(1,1,1);
     cr->arc(G0.x,G0.y,25,0,2*M_PI); cr->fill();
     cr->set_source_rgb(0,0,0);
