@@ -14,13 +14,17 @@ struct SCollision
     int nSubIx; // 1,2,3 = P1, P2, Pm
     };
 
+
 class CCanvas : public Gtk::DrawingArea
 {
     double  t{0}; // $t animation parameter
+    sigc::slot<bool> m_fSlot;
+    sigc::connection m_fConnection;
+    bool Animate(int);
 
 public:
   CCanvas();
-  virtual ~CCanvas() {};
+  virtual ~CCanvas() {m_fConnection.disconnect();};
   void MoveEbenenPunkt(double const & x,double const & y,double const & L);
 
 protected:

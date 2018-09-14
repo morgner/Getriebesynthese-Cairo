@@ -2,6 +2,8 @@
 #include "grundpunkt.h"
 #include <string>
 #include <array>
+#include <math.h>
+#include <gtkmm.h>
 
 VEbenenLagen    g_vEbenenLagen;// E1,  E2,  E3  = 3 homologe Lagen einer Ebene
 VPolDreieck     g_vPolDreieck; // P12, P13, P23 = 3 Polpunkte zu den o.g.Ebenenlagen
@@ -33,6 +35,16 @@ template<typename A, typename B>
 	{
 	return sqrt( pow((a.x-b.x),2) + pow((a.y-b.y),2) );
 	}
+
+auto CalcAlpha(double const & a, double const & b, double const & c)
+    {
+    auto cosinus = (pow(b,2)+pow(c,2)-pow(a,2)) / (2*b*c);
+    if ((cosinus<-1)||(cosinus>1))
+	return 0.0;
+
+    if (a<0) return (2*M_PI) - (acos( cosinus ));
+    return acos( cosinus );
+    }
 
 double MouseDistance( SPoint const & p, SPoint const & pMouse )
     {
@@ -154,6 +166,14 @@ void ExportSCAD( SPoint const & A0,
 //    std::cout << ote << '\n';
     }
 
+bool CCanvas::Animate(int c)
+    {
+    double nStep{0.005};
+    t = (t<1-nStep) ? t+nStep : 0;
+//    std::cout << t << "\n" << std::endl;
+    queue_draw();
+    return true;
+    }
 
 CCanvas::CCanvas()
     : m_bFirstClick(false),
@@ -164,8 +184,10 @@ CCanvas::CCanvas()
     add_events(Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK);
     add_events(Gdk::BUTTON1_MOTION_MASK | Gdk::BUTTON_PRESS_MASK | Gdk::POINTER_MOTION_MASK);
     add_events(Gdk::KEY_PRESS_MASK | Gdk::KEY_RELEASE_MASK);
-    }
 
+    m_fSlot       = sigc::bind(sigc::mem_fun(*this, &CCanvas::Animate), 0);
+    m_fConnection = Glib::signal_timeout().connect(m_fSlot, 40);
+    }
 
 
 bool CCanvas::on_key_press_event(GdkEventKey* key_event)
@@ -540,6 +562,8 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	dTransY -= h0 - height/2; h0 = height/2;
 	}
 
+//a    cr->save();
+
     Cairo::Matrix matrix(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
     matrix.scale(dScale,dScale);
     matrix.translate(dTransX/dScale, dTransY/dScale);
@@ -631,6 +655,8 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	    default: break;
 	    }
 	}
+//a    cr->restore();
+
 /*
     cr->set_source_rgb(.8,.8,.0);
     cr->set_line_width(2);
@@ -649,6 +675,88 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
     draw_text(cr, 200/s-tx/s, 80/s-ty/s, std::to_string((int)mx)   + ", " + std::to_string((int)my));
     draw_text(cr, 200/s-tx/s, 95/s-ty/s, std::to_string((int)(mx/s)) + ", " + std::to_string((int)(my/s)));
 */
+/*
+    cr->set_source_rgb(.4, .4, 1);
+    cr->rectangle(  -5,   -5, 10, 10);
+    cr->fill();
+
+    cr->save();
+    cr->set_source_rgb(.8, .8, 1);
+    cr->rotate(t*2*M_PI);
+    cr->rectangle(  0,   0, 100, 10);
+//    cr->rectangle(-50, -50, 100, 10);
+    cr->fill();
+    cr->restore();
+*/
+    if (g_vGrundPunkte.size()>1)
+	{
+	double lw=7;
+	cr->set_line_width(lw);
+/*
+	matrix = Cairo::Matrix(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+	matrix.translate(g_vGrundPunkte[0].G0().x, g_vGrundPunkte[0].G0().y);
+	matrix.rotate(t*2*M_PI);
+	cr->transform(matrix);
+*/
+	auto const S = sin(t*2*M_PI);
+	auto const C = cos(t*2*M_PI);
+	auto const & A0{g_vGrundPunkte[0].G0()};
+	auto const & A {g_vGrundPunkte[0].GPoint(0)};
+	auto const & B {g_vGrundPunkte[1].GPoint(0)};
+	auto const & B0{g_vGrundPunkte[1].G0()};
+
+	auto const GL = CalcDistance( A0, B0 );
+	auto const AL = CalcDistance( A0, A  );
+	auto const BL = CalcDistance( B0, B  );
+	auto const CL = CalcDistance( A , B  );
+	auto const DL = CalcDistance( A , B0 );
+
+	auto const pa = SPoint{A0.x+AL*S, A0.y+AL*C};
+	auto const  d = CalcDistance( pa , B0 );
+
+	auto const epsi = M_PI-CalcAlpha((pa.x-B0.x), -(pa.y-B0.y), d);
+	auto const beta = CalcAlpha(BL,CL,d);
+	auto const gama = CalcAlpha(CL,BL,d);
+
+//	std::cout << epsi/M_PI*180 << ", a="  << (B0.y-pa.y) << ", b="  << (B0.x-pa.x) << ", c="  << d << ", " << '\n';
+
+	// a, A0 -> A
+	cr->set_source_rgb(.4, 1, .4);
+	cr->set_source_rgb(0,0,0);
+	cr->move_to(A0.x, A0.y);
+	cr->line_to(pa.x, pa.y);
+	cr->stroke();
+/*
+	cr->set_source_rgb(.4, .4, 1);
+	cr->move_to(B0.x, B0.y);
+	cr->line_to(B0.x+d*sin(epsi), B0.y+d*cos(epsi));
+	cr->stroke();
+*/
+//	cr->set_source_rgb(.4, 1, 1);
+	cr->move_to(pa.x, pa.y);
+	cr->line_to(pa.x+CL*sin(epsi-beta+M_PI), pa.y+CL*cos(epsi-beta+M_PI));
+	cr->stroke();
+
+	auto pb = SPoint{B0.x+BL*sin(epsi+gama), B0.y+BL*cos(epsi+gama)};
+//	cr->set_source_rgb(1, 1, .4);
+	cr->move_to(B0.x, B0.y);
+	cr->line_to(B0.x+BL*sin(epsi+gama), B0.y+BL*cos(epsi+gama));
+	cr->stroke();
+
+	cr->arc(pa.x,pa.y,3,0,2*M_PI);
+	cr->stroke();
+
+	cr->arc(pb.x,pb.y,3,0,2*M_PI);
+	cr->stroke();
+
+	cr->set_source_rgb(1,1,1);
+
+	cr->arc(pa.x,pa.y,3,0,2*M_PI);
+	cr->fill();
+
+	cr->arc(pb.x,pb.y,3,0,2*M_PI);
+	cr->fill();
+	}
+
     return true;
     }
-
