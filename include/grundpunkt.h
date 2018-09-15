@@ -46,7 +46,6 @@ struct SUmkreis
     SPoint MidPnt;
     };
 
-
 using VEbenenLagen = std::vector<SEbene>;
 using VPolDreieck  = std::vector<SPoint>;
 using VGelenke     = std::vector<SPoint>;

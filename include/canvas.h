@@ -14,6 +14,32 @@ struct SCollision
     int nSubIx; // 1,2,3 = P1, P2, Pm
     };
 
+struct SPointB
+    {
+    SPointB() = default;
+    template<typename T>
+	SPointB(T x, T y) : x(x), y(y) {}
+    double x{0}, y{0};
+    };
+
+struct SButton
+    {
+    double x,y,w,h;
+    std::string t;
+
+    SButton (double const & ix, double const & iy,
+	     double const & iw, double const & ih,
+	     std::string it)
+	: x(ix), y(iy), w(iw), h(ih), t(it)
+	{}
+    bool Collision(SPointB const & p) const
+	{
+	return ( p.x > x && p.x < x+w && p.y > y && p.y < y+h );
+	}
+    };
+
+using VButtons     = std::vector<SButton>;
+
 
 class CCanvas : public Gtk::DrawingArea
 {
@@ -21,6 +47,11 @@ class CCanvas : public Gtk::DrawingArea
     sigc::slot<bool> m_fSlot;
     sigc::connection m_fConnection;
     bool Animate(int);
+
+    VButtons    m_voButtons;
+    std::string m_oButtonPressed;
+    bool        m_bDurchschlagen; // 1
+    bool        m_bDirectionLeft;
 
 public:
   CCanvas();
