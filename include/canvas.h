@@ -52,6 +52,7 @@ class CCanvas : public Gtk::DrawingArea
     std::string m_oButtonPressed;
     bool        m_bDurchschlagen; // 1
     bool        m_bDirectionLeft;
+    bool        m_bAnimate;
 
 public:
   CCanvas();

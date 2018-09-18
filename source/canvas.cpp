@@ -38,6 +38,16 @@ template<typename A, typename B>
 	return sqrt( pow((a.x-b.x),2) + pow((a.y-b.y),2) );
 	}
 
+template<typename A, typename B>
+    auto CalcDistanceAndSign(A const & a, B const & b)
+	{
+	auto dbax = (b.x - a.x);
+	auto dbay = (b.y - a.y);
+	auto dbad = ( 0 > dbax*dbay ) ? -1 : 1;
+	return dbad * sqrt( pow((a.x-b.x),2) + pow((a.y-b.y),2) );
+	}
+
+
 auto CalcAlpha(double const & a, double const & b, double const & c)
     {
     auto cosinus = (pow(b,2)+pow(c,2)-pow(a,2)) / (2*b*c);
@@ -46,6 +56,59 @@ auto CalcAlpha(double const & a, double const & b, double const & c)
 
     if (a<0) return (2*M_PI) - (acos( cosinus ));
     return acos( cosinus );
+    }
+
+auto CalcAlphaFull(double const & a, double const & b, double const & c)
+    {
+    auto cosinus = (pow(b,2)+pow(c,2)-pow(a,2)) / (2*b*c);
+    if ((cosinus<-1)||(cosinus>1))
+	return 0.0;
+
+    if (a<0) return (2*M_PI) - (acos( cosinus ));
+    return acos( cosinus );
+    }
+
+auto CalcVectorSlope(SPoint const & a, SPoint const & b)
+    {
+    auto const dba = SPoint{ b.x-a.x, b.y-a.y };
+    auto       sba = atan(dba.y / ((abs(dba.x)<.0001)?.0001:dba.x));
+//    if (dba.y<0) sba = 2*M_PI+sba;
+    if      ( (dba.x>0) && (dba.y<0) )
+	sba = -sba;
+    else if ( (dba.x<0) && (dba.y<0) )
+	sba = M_PI - sba;
+    else if ( (dba.x<0) && (dba.y>0) )
+	sba = M_PI - sba;
+    else if ( (dba.x>0) && (dba.y>0) )
+	sba = 2*M_PI - sba;
+
+    return sba;
+    }
+
+auto CalcVectorDiff(SPoint const & a, SPoint const & b, SPoint const & c)
+    {
+/*
+    auto const dba = SPoint{ b.x-a.x, b.y-a.y };
+    auto       sba = atan(dba.y / ((abs(dba.x)<.0001)?.0001:dba.x));
+    if (dba.y<0) sba = 2*M_PI+sba;
+
+    auto const dca = SPoint{ c.x-a.x, c.y-a.y };
+    auto       sca = atan(dca.y / ((abs(dca.x)<.0001)?.0001:dca.x));
+    if (dba.y<0) sca = 2*M_PI+sca;
+
+    return sca-sba;
+*/
+    auto slb = CalcVectorSlope(a,b);
+    auto slc = CalcVectorSlope(a,c);
+//    std::cout << ", a to ep1: " << slc/M_PI*180 << ", a to b: " << slb/M_PI*180 << " - ";
+/*
+    while (slb < 0)
+	{
+	slb += 2*M_PI;
+	slc += 2*M_PI;
+	}
+*/
+    return slc - slb;
     }
 
 double MouseDistance( SPoint const & p, SPoint const & pMouse )
@@ -168,11 +231,12 @@ void ExportSCAD( SPoint const & A0,
 //    std::cout << ote << '\n';
     }
 
-double       g_dAnimate   {0.010 };
+double       g_dAnimate   {0.0025};
 double const g_dAnimateMax{0.025 };
 double const g_dAnimateMin{0.0025};
 bool CCanvas::Animate(int c)
     {
+    if (!m_bAnimate) return true;
     if (m_bDirectionLeft)
 	t = (t<=1-g_dAnimate) ? t-g_dAnimate : 1;
     else
@@ -186,7 +250,8 @@ CCanvas::CCanvas()
       x1(0),y1(0),
       x2(0),y2(0),
       m_bDurchschlagen(false),
-      m_bDirectionLeft(true)
+      m_bDirectionLeft(true),
+      m_bAnimate(true)
     {
     add_events(Gdk::BUTTON_PRESS_MASK | Gdk::SCROLL_MASK | Gdk::SMOOTH_SCROLL_MASK);
     add_events(Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK);
@@ -335,6 +400,7 @@ bool CCanvas::on_button_release_event(GdkEventButton* event)
 	if ( m_oButtonPressed == "1" ) { g_dAnimate *= 1.1; g_dAnimate = (g_dAnimate>g_dAnimateMax)?g_dAnimateMax:g_dAnimate; }
 	if ( m_oButtonPressed == "2" ) m_bDurchschlagen = !m_bDurchschlagen;
 	if ( m_oButtonPressed == "3" ) m_bDirectionLeft = !m_bDirectionLeft;
+	if ( m_oButtonPressed == "4" ) m_bAnimate       = !m_bAnimate;
 	m_oButtonPressed="";
 	return true;
 	}
@@ -746,19 +812,19 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	auto const S = sin(t*2*M_PI);
 	auto const C = cos(t*2*M_PI);
 	auto const & A0{g_vGrundPunkte[0].G0()};
-	auto const & A {g_vGrundPunkte[0].GPoint(0)};
+	auto const & A1 {g_vGrundPunkte[0].GPoint(0)};
 	auto const & A2 {g_vGrundPunkte[0].GPoint(1)};
 	auto const & A3 {g_vGrundPunkte[0].GPoint(2)};
-	auto const & B {g_vGrundPunkte[1].GPoint(0)};
+	auto const & B1 {g_vGrundPunkte[1].GPoint(0)};
 	auto const & B2 {g_vGrundPunkte[1].GPoint(1)};
 	auto const & B3 {g_vGrundPunkte[1].GPoint(2)};
 	auto const & B0{g_vGrundPunkte[1].G0()};
 
 	auto const GL = CalcDistance( A0, B0 );
-	auto const AL = CalcDistance( A0, A  );
-	auto const BL = CalcDistance( B0, B  );
-	auto const CL = CalcDistance( A , B  );
-	auto const DL = CalcDistance( A , B0 );
+	auto const AL = CalcDistance( A0, A1 );
+	auto const BL = CalcDistance( B0, B1 );
+	auto const CL = CalcDistance( A1, B1 );
+	auto const DL = CalcDistance( A1, B0 );
 
 	auto const pa = SPoint{A0.x+AL*S, A0.y+AL*C};
 	auto const  d = CalcDistance( pa , B0 );
@@ -771,7 +837,7 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	SPoint pab;
 	if ( m_bDurchschlagen )
 	    {
-	    pb = SPoint{B0.x+BL*sin(epsi-gama), B0.y+BL*cos(epsi-gama)};
+	    pb  = SPoint{B0.x+BL*sin(epsi-gama), B0.y+BL*cos(epsi-gama)};
 	    pab = SPoint{pa.x+CL*sin(epsi+beta+M_PI), pa.y+CL*cos(epsi+beta+M_PI)};
 	    }
 	else
@@ -815,8 +881,8 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	cr->stroke();
 */
 
-	if ( CalcDistance(A, pa)<20 )
-	    if ( CalcDistance(B, pb)<30 )
+	if ( CalcDistance(A1, pa)<20 )
+	    if ( CalcDistance(B1, pb)<30 )
 		cr->set_source_rgb(.7, 1, .7);
 	    else
 		cr->set_source_rgb(1, .4, .7);
@@ -869,9 +935,57 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 
 	cr->arc(pb.x,pb.y,3,0,2*M_PI);
 	cr->fill();
+
+
+
+	// Ebene **************************************
+	SPoint const ep1{g_vEbenenLagen[0].x1,g_vEbenenLagen[0].y1};
+	SPoint const ep2{g_vEbenenLagen[0].x2,g_vEbenenLagen[0].y2};
+	auto       we  = CalcVectorSlope(ep1, ep2);
+	auto       le  = CalcDistance(ep1, ep2);
+
+/*
+ 	auto       wg  = CalcVectorSlope(pa, pb);
+	auto       wb  = CalcVectorSlope(pb, ep1);
+	auto       dw  = CalcVectorDiff(pa, pb, ep1);
+*/
+	auto       wg  = CalcVectorSlope(pa, pb);
+	auto       wb  = CalcVectorSlope(B1, ep1);
+	auto       dw  = CalcVectorDiff(B1, A1, ep1);
+
+	auto      dwe  = CalcVectorDiff(ep1, B1, ep2);
+
+
+	auto const lve = CalcDistance(B1, ep1);
+
+//	std::cout << " dw: " << dw/M_PI*180 << ",  wg: " << wg/M_PI*180 << ",  wb: " << wb/M_PI*180 << ",  lve: " << lve << '\n';
+
+	SPoint be{pb.x+lve*sin(wg+dw-M_PI/2), pb.y+lve*cos(wg+dw-M_PI/2)};
+	cr->set_source_rgb(0,1,1);
+	cr->move_to(pb.x, pb.y);
+	cr->line_to(be.x, be.y);
+	cr->stroke();
+
+	cr->set_source_rgb(1,0,0);
+	cr->set_line_width(13);
+	cr->move_to(be.x, be.y);
+	cr->line_to(be.x+le*sin(wg+dw+dwe+M_PI/2), be.y+le*cos(wg+dw+dwe+M_PI/2));
+	cr->stroke();
+
+/*
+	cr->move_to(pa.x, pa.y);
+	cr->line_to(ep1.x, ep1.y);
+	cr->line_to(pb.x, pb.y);
+	cr->line_to(pa.x, pa.y);
+	cr->fill();
+*/
 	}
 
-//  GUI
+
+
+
+
+    //  GUI
     auto constexpr uiOffset{ 32.0};
     auto constexpr uiBaseWd{  8.0};
     auto constexpr uiBaseLn{128.0};
@@ -887,6 +1001,8 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
     cr->rectangle((uiOffset/2-dTransX)/dScale, (uiOffset/2-dTransY)/dScale, (uiOffset/2*3)/dScale, (uiBaseLn+uiOffset)/dScale);
     cr->fill();
 */
+
+    // Buttons
     int i{0};
     for ( auto const & a:m_voButtons )
 	{
@@ -900,7 +1016,6 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	cr->set_source_rgb(0,0,0);
 	draw_text(cr,  (a.x+a.w/2-dTransX)/dScale, (a.y+a.h/2-dTransY)/dScale, a.t, dScale);
 	}
-
 
 
 
