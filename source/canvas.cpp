@@ -238,9 +238,9 @@ bool CCanvas::Animate(int c)
     {
     if (!m_bAnimate) return true;
     if (m_bDirectionLeft)
-	t = (t<=1-g_dAnimate) ? t-g_dAnimate : 1;
+	t = (t<=  g_dAnimate) ? 1 : t-g_dAnimate;
     else
-	t = (t<=1-g_dAnimate) ? t+g_dAnimate : 0;
+	t = (t>=1-g_dAnimate) ? 0 : t+g_dAnimate;
     queue_draw();
     return true;
     }
@@ -404,6 +404,10 @@ bool CCanvas::on_button_release_event(GdkEventButton* event)
 	m_oButtonPressed="";
 	return true;
 	}
+
+    m_vSpurE1.clear();
+    m_vSpurE2.clear();
+    t0 = 0;
 
     if (g_tCollision.eWhat == SCollision::EWhat::none)
 	{
@@ -960,16 +964,17 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 
 //	std::cout << " dw: " << dw/M_PI*180 << ",  wg: " << wg/M_PI*180 << ",  wb: " << wb/M_PI*180 << ",  lve: " << lve << '\n';
 
-	SPoint be{pb.x+lve*sin(wg+dw-M_PI/2), pb.y+lve*cos(wg+dw-M_PI/2)};
+	SPoint be1{pb.x+lve*sin(wg+dw-M_PI/2), pb.y+lve*cos(wg+dw-M_PI/2)};
+	SPoint be2{be1.x+le*sin(wg+dw+dwe+M_PI/2), be1.y+le*cos(wg+dw+dwe+M_PI/2)};
 	cr->set_source_rgb(0,1,1);
 	cr->move_to(pb.x, pb.y);
-	cr->line_to(be.x, be.y);
+	cr->line_to(be1.x, be1.y);
 	cr->stroke();
 
 	cr->set_source_rgb(1,0,0);
 	cr->set_line_width(13);
-	cr->move_to(be.x, be.y);
-	cr->line_to(be.x+le*sin(wg+dw+dwe+M_PI/2), be.y+le*cos(wg+dw+dwe+M_PI/2));
+	cr->move_to(be1.x, be1.y);
+	cr->line_to(be2.x, be2.y);
 	cr->stroke();
 
 /*
@@ -979,6 +984,30 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	cr->line_to(pa.x, pa.y);
 	cr->fill();
 */
+
+	if (360*t0+1 > m_vSpurE1.size())
+	    {
+	    m_vSpurE1.emplace_back(SPointB{be1.x,be1.y});
+	    m_vSpurE2.emplace_back(SPointB{be2.x,be2.y});
+	    }
+	if (t0<=1.1) t0 += g_dAnimate;
+	std::cout << "i: " << t0*360 << " c: " << m_vSpurE1.size() << '\n';
+	cr->set_source_rgb(0,0,0);
+	cr->set_line_width(2);
+
+	if (m_vSpurE1.size()) cr->move_to(m_vSpurE1[0].x, m_vSpurE1[0].y);
+	for (auto const & a:m_vSpurE1)
+	    {
+	    cr->line_to(a.x, a.y);
+	    }
+	cr->stroke();
+
+	if (m_vSpurE2.size()) cr->move_to(m_vSpurE2[0].x, m_vSpurE2[0].y);
+	for (auto const & a:m_vSpurE2)
+	    {
+	    cr->line_to(a.x, a.y);
+	    }
+	cr->stroke();
 	}
 
 

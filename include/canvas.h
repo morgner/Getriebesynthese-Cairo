@@ -43,7 +43,7 @@ using VButtons     = std::vector<SButton>;
 
 class CCanvas : public Gtk::DrawingArea
 {
-    double  t{0}; // $t animation parameter
+    double           t{0},t0{0}; // $t animation parameter
     sigc::slot<bool> m_fSlot;
     sigc::connection m_fConnection;
     bool Animate(int);
@@ -53,6 +53,9 @@ class CCanvas : public Gtk::DrawingArea
     bool        m_bDurchschlagen; // 1
     bool        m_bDirectionLeft;
     bool        m_bAnimate;
+
+    std::vector<SPointB> m_vSpurE1;
+    std::vector<SPointB> m_vSpurE2;
 
 public:
   CCanvas();
