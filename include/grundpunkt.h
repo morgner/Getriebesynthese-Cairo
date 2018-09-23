@@ -27,9 +27,7 @@ using TRenderer=Cairo::RefPtr<Cairo::Context>;
 struct SPoint
     {
     SPoint() = default;
-    template<typename T>
-	SPoint(T x, T y) : x(x), y(y) {}
-
+    SPoint(double const & x, double const & y) : x(x), y(y) {}
     double x{0}, y{0};
     };
 
@@ -39,6 +37,8 @@ struct SEbene
     double x1{0}, y1{0};
     double x2{0}, y2{0};
     };
+
+using SLine = SEbene;
 
 struct SUmkreis
     {
@@ -72,7 +72,7 @@ SEbene FixedLenLine(SEbene & roL, double const & crnLenEbene, bool const & crbFi
 
 SPoint Intersection(SEbene const & E1, SEbene const & E2)
     {
-    double dx1,dx2,m1,n1,m2,n2;
+    double dx1, dx2, m1, n1, m2, n2;
 
     dx1 = E1.x2 - E1.x1;
     dx2 = E2.x2 - E2.x1;
@@ -127,43 +127,37 @@ SPoint PointMirror(TRenderer const & cr, SPoint const & croPoint, SEbene const &
 SPoint CalcPolpunkt(SEbene const & E1, SEbene const & E2)
     {
     SEbene const L1{ E1.x1, E1.y1, E2.x1, E2.y1 };
-    auto La = Perpendicle(L1);
+    auto   const La{ Perpendicle(L1) };
 
     SEbene const L2{ E1.x2, E1.y2, E2.x2, E2.y2 };
-    auto Lb = Perpendicle(L2);
+    auto   const Lb{ Perpendicle(L2) };
 
-    return Intersection( La, Lb );
-    }
-
-SUmkreis RenderUmkreis( TRenderer const & cr, SPoint const & P1, SPoint const & P2, SPoint const & P3 )
-    {
-    SEbene const L1{ (double)P1.x, (double)P1.y, (double)P2.x, (double)P2.y };
-    auto La = Perpendicle(L1);
-    SEbene const L2{ (double)P1.x, (double)P1.y, (double)P3.x, (double)P3.y };
-    auto Lb = Perpendicle(L2);
-
-    auto M = Intersection( La, Lb );
-    auto R = sqrt( (double)(M.x - L1.x1)*(M.x - L1.x1) + (M.y - L1.y1)*(M.y - L1.y1) );
-
-    cr->set_source_rgba(1, 0, 0,0.5);
-    cr->arc(M.x, M.y, R, 0, 2*M_PI);
-    cr->fill();
-    cr->stroke();
-
-    return { R, M };
+    return std::move(Intersection(La, Lb));
     }
 
 SUmkreis Umkreis( SPoint const & P1, SPoint const & P2, SPoint const & P3 )
     {
-    SEbene const L1{ (double)P1.x, (double)P1.y, (double)P2.x, (double)P2.y };
-    auto La = Perpendicle(L1);
-    SEbene const L2{ (double)P1.x, (double)P1.y, (double)P3.x, (double)P3.y };
-    auto Lb = Perpendicle(L2);
+    SEbene const L1{ P1.x, P1.y, P2.x, P2.y };
+    auto   const La{ Perpendicle(L1) };
+    SEbene const L2{ P1.x, P1.y, P3.x, P3.y };
+    auto   const Lb{ Perpendicle(L2) };
 
-    auto M = Intersection( La, Lb );
-    auto R = sqrt( (double)(M.x - L1.x1)*(M.x - L1.x1) + (M.y - L1.y1)*(M.y - L1.y1) );
+    auto const M{Intersection(La, Lb)};
+    auto const R{sqrt( (double)(M.x - L1.x1)*(M.x - L1.x1) + (M.y - L1.y1)*(M.y - L1.y1) )};
 
     return { R, M };
+    }
+
+SUmkreis RenderUmkreis( TRenderer const & cr, SPoint const & P1, SPoint const & P2, SPoint const & P3 )
+    {
+    auto const U{Umkreis(P1, P2, P3)};
+
+    cr->set_source_rgba(1, 0, 0,0.5);
+    cr->arc(U.MidPnt.x, U.MidPnt.y, U.Radius, 0, 2*M_PI);
+    cr->fill();
+    cr->stroke();
+
+    return std::move(U);
     }
 
 
@@ -178,7 +172,7 @@ class CGrundpunkt
 
 	double    m_dX{};
 	double    m_dY{};
-	SUmkreis m_tUK{};
+	SUmkreis  m_tUK{};
 	A3Gelenke m_a3Gelenke{}; // Gelenkpunkte
 	bool      m_bFixed{true};
 
@@ -188,12 +182,12 @@ class CGrundpunkt
 	CGrundpunkt(SPoint const & P123) : m_dX(P123.x), m_dY(P123.y) {}
 	CGrundpunkt(CGrundpunkt const & src) = default;
 
-	void FixIt( bool bFixit = true ) { m_bFixed = bFixit; }
-	bool Isfix() { return m_bFixed; }
+	void FixIt( bool const bFixit = true ) { m_bFixed = bFixit; }
+	bool Isfix() const { return m_bFixed; }
 
-	SPoint P123() const { return {m_dX, m_dY}; }
+	SPoint const   P123() const { return {m_dX, m_dY}; }
 	SPoint const & G0() const { return m_tUK.MidPnt; }
-	SPoint const & GPoint( int i ) const { return m_a3Gelenke[i]; }
+	SPoint const & GPoint( int const & i ) const { return m_a3Gelenke[i]; }
 
 	void UpdateAndShow( TRenderer const & cr, SPoint const & P123, VPolDreieck const & Poldreieck)
 	    {
@@ -209,7 +203,7 @@ class CGrundpunkt
 
 	void Show( TRenderer const & cr, VPolDreieck const & Poldreieck)
 	    {
-	    cr->set_line_width(2); //!!
+	    cr->set_line_width(1); //!!
 
 	    // P123
 	    cr->set_source_rgba(0, .5, .5, 0.75);
@@ -219,15 +213,18 @@ class CGrundpunkt
 	    cr->arc(m_dX, m_dY, 8, 0, 2*M_PI);
 	    cr->stroke();
 
-	    A3Gelenke G;
+	    A3Gelenke & G = m_a3Gelenke;
 	    for ( int n=0, i=0, j=0; n < 3; ++n )
 		{
 		// Lines: P12-P13, P12-P23, P13-P23
-		if (n == 0) { i=0; j=1; }
-		if (n == 1) { i=0; j=2; }
-		if (n == 2) { i=1; j=2; }
-		SEbene PL{ (double)Poldreieck[i].x, (double)Poldreieck[i].y,
-			    (double)Poldreieck[j].x, (double)Poldreieck[j].y};
+		switch (n)
+		    {
+		    case 0: i=0; j=1; break;
+		    case 1: i=0; j=2; break;
+		    case 2: i=1; j=2; break;
+		    }
+		SLine const PL{ (double)Poldreieck[i].x, (double)Poldreieck[i].y,
+			        (double)Poldreieck[j].x, (double)Poldreieck[j].y};
 		G[n] = PointMirror( cr, { m_dX, m_dY }, PL );
 		cr->set_source_rgba(1, 0, 0, 0.25);
 		cr->arc(m_dX, m_dY, 20, 0, 2*M_PI);
@@ -236,13 +233,12 @@ class CGrundpunkt
 		cr->set_source_rgb(0, 0, 0);
 		cr->stroke();
 		} // for (...
-	    m_a3Gelenke = G;
 
 	    m_tUK = Umkreis( G[0], G[1], G[2] );
 	    cr->set_source_rgba(.5, .5, 0, 0.5);
 	    cr->arc(m_tUK.MidPnt.x, m_tUK.MidPnt.y, 36, 0, 2*M_PI);
 	    cr->fill();
-	    cr->set_line_width(2);
+	    cr->set_line_width(1);
 	    cr->set_source_rgb(0, 0, 0);
 	    cr->arc(m_tUK.MidPnt.x, m_tUK.MidPnt.y, 36, 0, 2*M_PI);
 	    cr->stroke();

@@ -7,6 +7,7 @@ struct SCollision
     {
     enum class EWhat {
 	none,
+	A,
 	Ebene,
 	Grundpunkt,
     } eWhat;
@@ -18,8 +19,9 @@ struct SPointB
     {
     SPointB() = default;
     template<typename T>
-	SPointB(T x, T y) : x(x), y(y) {}
+	SPointB(T x, T y, bool b=false) : x(x), y(y), bCSplit(b)  {}
     double x{0}, y{0};
+    bool   bCSplit{false};
     };
 
 struct SButton
@@ -53,14 +55,18 @@ class CCanvas : public Gtk::DrawingArea
     bool        m_bDurchschlagen; // 1
     bool        m_bDirectionLeft;
     bool        m_bAnimate;
+    bool        m_bWithTraces;
+    bool        m_bRotate;
 
     std::vector<SPointB> m_vSpurE1;
     std::vector<SPointB> m_vSpurE2;
+
 
 public:
   CCanvas();
   virtual ~CCanvas() {m_fConnection.disconnect();};
   void MoveEbenenPunkt(double const & x,double const & y,double const & L);
+  void MovePunktA(double const & x,double const & y);
 
 protected:
   //Override default signal handler:
