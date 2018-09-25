@@ -148,19 +148,6 @@ SUmkreis Umkreis( SPoint const & P1, SPoint const & P2, SPoint const & P3 )
     return { R, M };
     }
 
-SUmkreis RenderUmkreis( TRenderer const & cr, SPoint const & P1, SPoint const & P2, SPoint const & P3 )
-    {
-    auto const U{Umkreis(P1, P2, P3)};
-
-    cr->set_source_rgba(1, 0, 0,0.5);
-    cr->arc(U.MidPnt.x, U.MidPnt.y, U.Radius, 0, 2*M_PI);
-    cr->fill();
-    cr->stroke();
-
-    return std::move(U);
-    }
-
-
 /*
  * CGrundpunkt
  *
@@ -235,6 +222,7 @@ class CGrundpunkt
 		} // for (...
 
 	    m_tUK = Umkreis( G[0], G[1], G[2] );
+/*
 	    cr->set_source_rgba(.5, .5, 0, 0.5);
 	    cr->arc(m_tUK.MidPnt.x, m_tUK.MidPnt.y, 36, 0, 2*M_PI);
 	    cr->fill();
@@ -242,6 +230,7 @@ class CGrundpunkt
 	    cr->set_source_rgb(0, 0, 0);
 	    cr->arc(m_tUK.MidPnt.x, m_tUK.MidPnt.y, 36, 0, 2*M_PI);
 	    cr->stroke();
+*/
 	    }
     }; // class CGrundpunkt
 

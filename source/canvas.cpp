@@ -16,6 +16,9 @@ SCollision      g_tCollision{SCollision::EWhat::none, 0, 0};
 CGrundpunkt     g_oGrundpunkt({-1, -1});
 VGrundpunkte    g_vGrundPunkte;
 double          g_dGVS;
+bool            g_bShowText{true};
+bool            g_bShowHints{true};
+bool            g_bShowBlink{true};
 double dScale  {1.0}; // scale
 bool   bTransInitialized {false}; // translation initialized?
 double dTransX {0.0}; // translation relativ pos
@@ -47,6 +50,7 @@ auto CalcAlpha(double const & a, double const & b, double const & c)
     auto cosinus = (pow(b,2)+pow(c,2)-pow(a,2)) / (2*b*c);
     if ((cosinus<-1)||(cosinus>1))
 	{
+//	std::cout << "cos(alfa): " << cosinus << ", ";
 	return 0.0;
 	}
 
@@ -245,10 +249,10 @@ CCanvas::CCanvas()
     m_fSlot       = sigc::bind(sigc::mem_fun(*this, &CCanvas::Animate), 0);
     m_fConnection = Glib::signal_timeout().connect(m_fSlot, 40);
 
-    for ( int i{0}; i<7; ++i)
+    for ( int i{0}; i<10; ++i)
 	{
-	auto constexpr bs{42};
-	auto constexpr uix{20.0},uiy{20.0},uiw{42.0},uih{42.0};
+	auto constexpr bs{38.0};
+	auto constexpr uix{20.0},uiy{20.0},uiw{bs},uih{bs};
 	auto constexpr bo{8.0};
 	m_voButtons.emplace_back( 72+uix+i*(uiw+bo), uiy, uiw, uih, std::to_string(i) );
 	}
@@ -387,17 +391,19 @@ bool CCanvas::on_button_release_event(GdkEventButton* event)
     {
     if ( m_oButtonPressed.size() > 0 )
 	{
-//	std::cout << m_oButtonPressed << '\n';
-
 	if ( m_oButtonPressed == "0" ) { g_dAnimate *= 0.9; g_dAnimate = (g_dAnimate<g_dAnimateMin)?g_dAnimateMin:g_dAnimate; }
 	if ( m_oButtonPressed == "1" ) { g_dAnimate *= 1.1; g_dAnimate = (g_dAnimate>g_dAnimateMax)?g_dAnimateMax:g_dAnimate; }
-	if ( m_oButtonPressed == "2" ) m_bDurchschlagen = !m_bDurchschlagen;
-	if ( m_oButtonPressed == "3" ) m_bDirectionLeft = !m_bDirectionLeft;
-	if ( m_oButtonPressed == "4" ) m_bAnimate       = !m_bAnimate;
-	if ( m_oButtonPressed == "5" ) m_bWithTraces    = !m_bWithTraces;
-	if ( m_oButtonPressed == "6" ) m_bRotate        = !m_bRotate;
+	if ( m_oButtonPressed == "2" ) { m_bDurchschlagen = !m_bDurchschlagen; m_vSpurE1.clear(); m_vSpurE2.clear(); t0 = 0;  }
+	if ( m_oButtonPressed == "3" )   m_bDirectionLeft = !m_bDirectionLeft;
+	if ( m_oButtonPressed == "4" )   m_bAnimate       = !m_bAnimate;
+	if ( m_oButtonPressed == "5" ) { m_bWithTraces    = !m_bWithTraces; m_vSpurE1.clear(); m_vSpurE2.clear(); t0 = 0; }
+	if ( m_oButtonPressed == "6" )   m_bRotate        = !m_bRotate;
+	if ( m_oButtonPressed == "7" )   g_bShowText      = !g_bShowText;
+	if ( m_oButtonPressed == "8" )   g_bShowHints     = !g_bShowHints;
+	if ( m_oButtonPressed == "9" )   g_bShowBlink     = !g_bShowBlink;
 
 	m_oButtonPressed="";
+	queue_draw();
 	return true;
 	}
 
@@ -509,7 +515,9 @@ void draw_text(Cairo::RefPtr<Cairo::Context> const & cr,
 	       int posx, int posy,
 	       std::string const & crsText, double const & scale = 1.0)
 {
-  cr->save();
+    if (!g_bShowText) return;
+
+    cr->save();
 
 //  PangoAttribute *attr = pango_attr_size_new_absolute(20 * PANGO_SCALE);
 
@@ -537,136 +545,6 @@ void draw_text(Cairo::RefPtr<Cairo::Context> const & cr,
   cr->restore();
 }
 
-void draw_ebene(Cairo::RefPtr<Cairo::Context> const & cr,
-	        SEbene const & croEbene, int nId)
-    {
-    cr->set_line_cap(Cairo::LINE_CAP_ROUND);
-    cr->set_line_width(13);
-    cr->set_source_rgb(1,0,0);
-    cr->move_to(croEbene.x1,croEbene.y1);
-    cr->line_to(croEbene.x2,croEbene.y2);
-    cr->stroke();
-
-    cr->set_source_rgb(1,1,1);
-    cr->arc(croEbene.x1,croEbene.y1,5,0,2*M_PI);
-    cr->fill();
-    cr->arc(croEbene.x2,croEbene.y2,5,0,2*M_PI);
-    cr->fill();
-
-    cr->set_source_rgb(0,0,0);
-    draw_text(cr,  croEbene.x1+12, croEbene.y1-12, "p1");
-    draw_text(cr,  croEbene.x2+12, croEbene.y2-12, "p2");
-    draw_text(cr, (croEbene.x2+croEbene.x1)/2,
-	          (croEbene.y2+croEbene.y1)/2, "E"+std::to_string(nId));
-    }
-
-void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
-	             CGrundpunkt & croGP, int nId)
-    {
-    croGP.Show( cr, g_vPolDreieck);
-
-    SPoint const G0 = croGP.G0();
-
-    std::string sId = std::array<std::string,5>{"U","A","B","C","E"}[(nId>4)?4:nId];
-
-    cr->set_source_rgb(0,0,0);
-    draw_text(cr, croGP.P123().x,croGP.P123().y+27, sId+"123");
-
-    cr->set_source_rgb(1,1,1);
-    cr->arc(G0.x,G0.y,25,0,2*M_PI); cr->fill();
-    cr->set_source_rgb(0,0,0);
-    cr->arc(G0.x,G0.y,25,0,2*M_PI); cr->stroke();
-
-    cr->move_to(G0.x,G0.y);
-    cr->line_to(G0.x+4,G0.y);
-    cr->arc(G0.x,G0.y,25,0,M_PI/2);
-    cr->line_to(G0.x,G0.y);
-    cr->fill();
-    cr->move_to(G0.x,G0.y);
-    cr->line_to(G0.x-4,G0.y);
-    cr->arc(G0.x,G0.y,25,M_PI,M_PI/2*3);
-    cr->line_to(G0.x,G0.y);
-    cr->fill();
-
-    for ( int i{0}; i<3; ++i)
-	{
-	SPoint const GPoint = croGP.GPoint(i);
-
-    	cr->set_line_cap(Cairo::LINE_CAP_ROUND);
-    	cr->set_line_width(4);
-    	cr->set_source_rgba(.5,.5,.5,.5);
-    	cr->move_to(G0.x,G0.y);
-    	cr->line_to(GPoint.x,GPoint.y);
-
-    	if (nId == 2)
-    	    {
-    	    cr->line_to(g_vGrundPunkte[0].GPoint(i).x,g_vGrundPunkte[0].GPoint(i).y);
-    	    }
-    	cr->stroke();
-
-    	if (i==0)
-    	    {
-	    cr->set_source_rgb(0,0,0);
-	    draw_text(cr, (G0.x+GPoint.x)/2,(G0.y+GPoint.y)/2,
-          		   std::to_string((int) CalcDistance(G0, GPoint) ));
-
-	    cr->set_source_rgba(.5,.5,.5,.5);
-    	    }
-	}
-//--------------------------------
-    for ( int i{0}; i<3; ++i)
-	{
-	SPoint const GPoint = croGP.GPoint(i);
-
-	cr->set_source_rgb(.8,.8,1);
-	cr->arc(GPoint.x,GPoint.y,10,0,2*M_PI);
-	cr->fill();
-	cr->set_source_rgb(0,0,0);
-	cr->set_line_width(2);
-	cr->arc(GPoint.x,GPoint.y,10,0,2*M_PI);
-	cr->stroke();
-
-    	cr->set_source_rgb(0,0,0);
-    	draw_text(cr, GPoint.x,GPoint.y, sId+std::to_string(i+1));
-	}
-
-    cr->set_source_rgb(0,0,0);
-    draw_text(cr, G0.x,G0.y-42, sId+"0");
-    }
-
-void draw_poldreieck(Cairo::RefPtr<Cairo::Context> const & cr,
-	          VPolDreieck const & croPD, int nId)
-    {
-    cr->set_line_cap(Cairo::LINE_CAP_ROUND);
-    cr->set_line_width(1);
-    cr->set_source_rgba(0,1,0,.5);
-    cr->move_to(croPD[0].x,croPD[0].y);
-    cr->line_to(croPD[1].x,croPD[1].y);
-    cr->line_to(croPD[2].x,croPD[2].y);
-    cr->fill();
-    cr->set_source_rgb(0,0,0);
-//    cr->set_line_width(2);
-    cr->move_to(croPD[0].x,croPD[0].y);
-    cr->line_to(croPD[1].x,croPD[1].y);
-    cr->line_to(croPD[2].x,croPD[2].y);
-    cr->line_to(croPD[0].x,croPD[0].y);
-    cr->stroke();
-
-    SUmkreis tUmkreis = Umkreis( croPD[0], croPD[1], croPD[2] );
-    cr->set_source_rgba(1,1,1,.25);
-    cr->arc(tUmkreis.MidPnt.x,tUmkreis.MidPnt.y,tUmkreis.Radius,0,2*M_PI);
-    cr->fill();
-    cr->set_source_rgb(0,0,0);
-    cr->arc(tUmkreis.MidPnt.x,tUmkreis.MidPnt.y,tUmkreis.Radius,0,2*M_PI);
-    cr->stroke();
-
-    cr->set_source_rgb(0,0,0);
-    draw_text(cr,  croPD[0].x,croPD[0].y, "P12\n");
-    draw_text(cr,  croPD[1].x,croPD[1].y, "P13\n");
-    draw_text(cr,  croPD[2].x,croPD[2].y, "P23\n");
-    draw_text(cr,  croPD[0].x,croPD[0].y, "");
-    }
-
 template<typename P>
     void MoveTo(Cairo::RefPtr<Cairo::Context> const & cr, P const & tPoint)
 	{
@@ -677,6 +555,14 @@ template<typename P>
     void LineTo(Cairo::RefPtr<Cairo::Context> const & cr, P const & tPoint)
 	{
 	cr->line_to(tPoint.x, tPoint.y);
+	}
+
+template<typename L>
+    void Line(Cairo::RefPtr<Cairo::Context> const & cr, L const & tLine )
+	{
+	cr->move_to(tLine.x1,tLine.y1);
+	cr->line_to(tLine.x2,tLine.y2);
+	cr->stroke();
 	}
 
 template<typename S, typename... P>
@@ -710,6 +596,149 @@ template<typename P>
 	}
 
 
+
+void draw_ebene(Cairo::RefPtr<Cairo::Context> const & cr,
+	        SEbene const & croEbene, int nId)
+    {
+    cr->set_line_cap(Cairo::LINE_CAP_ROUND);
+    cr->set_line_width(13);
+    cr->set_source_rgb(1,0,0);
+    Line(cr, croEbene);
+
+    cr->set_source_rgb(1,1,1);
+    Circle(cr, SPoint{croEbene.x1,croEbene.y1},5);
+    Circle(cr, SPoint{croEbene.x2,croEbene.y2},5);
+
+    cr->set_source_rgb(0,0,0);
+    draw_text(cr,  croEbene.x1+12, croEbene.y1-12, "p1");
+    draw_text(cr,  croEbene.x2+12, croEbene.y2-12, "p2");
+    draw_text(cr, (croEbene.x2+croEbene.x1)/2,
+	          (croEbene.y2+croEbene.y1)/2, "E"+std::to_string(nId));
+    }
+
+void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
+	             CGrundpunkt & croGP, int nId)
+    {
+    croGP.Show( cr, g_vPolDreieck);
+
+    SPoint const G0 = croGP.G0();
+
+    std::string sId = std::array<std::string,5>{"U","A","B","C","E"}[(nId>4)?4:nId];
+
+    if (g_bShowHints)
+	{
+	for ( int i{0}; i<3; ++i)
+	    {
+	    SPoint const GPoint = croGP.GPoint(i);
+
+	    cr->set_line_cap(Cairo::LINE_CAP_ROUND);
+	    cr->set_line_width(4);
+	    cr->set_source_rgba(.5,.5,.5,.5);
+	    Line(cr,G0,GPoint);
+
+	    if (nId == 1)
+		{
+		if (g_vGrundPunkte.size()>1)
+		    {
+		    auto const A{g_vGrundPunkte[0].GPoint(i)};
+		    auto const B{g_vGrundPunkte[1].GPoint(i)};
+		    Line(cr,A,B);
+		    if (i==0)
+			{
+			cr->set_source_rgb(0,0,0);
+			draw_text(cr, (A.x+B.x)/2,(A.y+B.y)/2, std::to_string((int) CalcDistance(A,B)));
+			}
+		    }
+		else
+		    {
+		    if (g_vGrundPunkte.size()>0)
+			{
+			auto const A{g_vGrundPunkte[0].GPoint(i)};
+			auto const B{g_oGrundpunkt.GPoint(i)};
+			Line(cr,A,B);
+			if (i==0)
+			    {
+			    cr->set_source_rgb(0,0,0);
+			    draw_text(cr, (A.x+B.x)/2,(A.y+B.y)/2, std::to_string((int) CalcDistance(A,B)));
+			    }
+			}
+		    }
+		}
+
+	    if (i==0)
+		{
+		cr->set_source_rgb(0,0,0);
+		draw_text(cr, (G0.x+GPoint.x)/2,(G0.y+GPoint.y)/2,
+			       std::to_string((int) CalcDistance(G0, GPoint) ));
+		}
+	    cr->set_source_rgba(.5,.5,.5,.5);
+	    }
+    //--------------------------------
+	for ( int i{0}; i<3; ++i)
+	    {
+	    SPoint const GPoint = croGP.GPoint(i);
+
+	    cr->set_source_rgb(.8,.8,1);
+	    Circle(cr,GPoint,10);
+	    cr->set_source_rgb(0,0,0);
+	    cr->set_line_width(2);
+	    Ring(cr,GPoint,10);
+	    cr->set_source_rgb(0,0,0);
+	    draw_text(cr, GPoint.x,GPoint.y, sId+std::to_string(i+1));
+	    }
+
+	cr->set_source_rgb(0,0,0);
+	draw_text(cr, croGP.P123().x,croGP.P123().y+27, sId+"123");
+	}
+
+    // G0 ------------------------------------------------
+    cr->set_source_rgb(1,1,1);
+    Circle(cr, G0,25);
+    cr->set_source_rgb(0,0,0);
+    cr->set_line_width(4);
+    Ring(cr, G0,25);
+
+    cr->set_line_width(1);
+    cr->move_to(G0.x,G0.y);
+    cr->line_to(G0.x+4,G0.y);
+    cr->arc(G0.x,G0.y,25,0,M_PI/2);
+    cr->line_to(G0.x,G0.y);
+    cr->fill();
+    cr->move_to(G0.x,G0.y);
+    cr->line_to(G0.x-4,G0.y);
+    cr->arc(G0.x,G0.y,25,M_PI,M_PI/2*3);
+    cr->line_to(G0.x,G0.y);
+    cr->fill();
+
+    cr->set_source_rgb(0,0,0);
+    draw_text(cr, G0.x,G0.y-32, sId+"0");
+    }
+
+void draw_poldreieck(Cairo::RefPtr<Cairo::Context> const & cr,
+	          VPolDreieck const & croPD, int nId)
+    {
+    if (!g_bShowHints) return;
+
+    cr->set_line_cap(Cairo::LINE_CAP_ROUND);
+    cr->set_line_width(1);
+    cr->set_source_rgba(0,1,0,.5);
+    Polygon(cr, croPD[0], croPD[1], croPD[2]);
+    cr->set_source_rgb(0,0,0);
+//    cr->set_line_width(2);
+    Line(cr, croPD[0], croPD[1], croPD[2], croPD[0]);
+
+    SUmkreis tUmkreis = Umkreis( croPD[0], croPD[1], croPD[2] );
+    cr->set_source_rgba(1,1,1,.25);
+    Circle(cr, tUmkreis.MidPnt, tUmkreis.Radius);
+    cr->set_source_rgb(0,0,0);
+    Ring(cr, tUmkreis.MidPnt, tUmkreis.Radius);
+
+    cr->set_source_rgb(0,0,0);
+    draw_text(cr,  croPD[0].x,croPD[0].y, "P12\n");
+    draw_text(cr,  croPD[1].x,croPD[1].y, "P13\n");
+    draw_text(cr,  croPD[2].x,croPD[2].y, "P23\n");
+    draw_text(cr,  croPD[0].x,croPD[0].y, "");
+    }
 
 bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
     {
@@ -909,8 +938,12 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 //	auto const epsi = M_PI-CalcAlpha((g_tPointA.x-B0.x), -(g_tPointA.y-B0.y), d);
 	auto const epsi = CalcVectorSlope(g_tPointA, B0) -M_PI/2;
 
-	auto const beta = CalcAlpha(BL,CL,d);
-	auto const gama = CalcAlpha(CL,BL,d);
+	auto const beta = CalcAlpha(BL,CL,d); // 143,  86, CalcDistance( g_tPointA , B0 )  g:58, a:43
+	auto const gama = CalcAlpha(CL,BL,d); //  86, 143, CalcDistance( g_tPointA , B0 )
+
+	std::cout << "e: " << epsi/M_PI*180 << ", b: " << beta/M_PI*180 << ", g: " << gama/M_PI*180 << '\n';
+
+//	if ( beta*gama == 0.0 ) return true;
 
 	SPoint g_tPointB;
 	SPoint pab;
@@ -931,12 +964,18 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	if ( d > (BL+CL) )
 	    cr->set_source_rgb(0,0,0);
 
-	Line(cr, A0, g_tPointA);
-	Line(cr, g_tPointA, pab);
-	Line(cr, B0, g_tPointB);
-	cr->set_source_rgb(.5,.0,.0); Line(cr, A0, g_tPointA);
-	cr->set_source_rgb(.0,.5,.0); Line(cr, g_tPointA,pab);
-	cr->set_source_rgb(.0,.0,.5); Line(cr, B0, g_tPointB);
+	if (g_bShowBlink)
+	    {
+	    Line(cr, A0, g_tPointA);
+	    Line(cr, g_tPointA, pab);
+	    Line(cr, B0, g_tPointB);
+	    }
+	else
+	    {
+	    cr->set_source_rgb(.5,.0,.0); Line(cr, A0, g_tPointA);
+	    cr->set_source_rgb(.0,.5,.0); Line(cr, g_tPointA,pab);
+	    cr->set_source_rgb(.0,.0,.5); Line(cr, B0, g_tPointB);
+	    }
 
 	if ( CalcDistance(A1, g_tPointA)<20 )
 	    if ( CalcDistance(B1, g_tPointB)<30 )
@@ -962,9 +1001,18 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 
 	cr->set_line_width(lw);
 
-	cr->set_source_rgb(.5,.0,.0); Line(cr, A0, g_tPointA);
-	cr->set_source_rgb(.0,.5,.0); Line(cr, g_tPointA,pab);
-	cr->set_source_rgb(.0,.0,.5); Line(cr, B0, g_tPointB);
+	if (g_bShowBlink)
+	    {
+	    Line(cr, A0, g_tPointA);
+	    Line(cr, g_tPointA, pab);
+	    Line(cr, B0, g_tPointB);
+	    }
+	else
+	    {
+	    cr->set_source_rgb(.5,.0,.0); Line(cr, A0, g_tPointA);
+	    cr->set_source_rgb(.0,.5,.0); Line(cr, g_tPointA,pab);
+	    cr->set_source_rgb(.0,.0,.5); Line(cr, B0, g_tPointB);
+	    }
 
 	Ring(cr, g_tPointA, 3);
 	Ring(cr, g_tPointB, 3);
