@@ -4,7 +4,6 @@
 #include <array>
 #include <math.h>
 #include <gtkmm.h>
-#include <gdkmm/pixbuf.h>
 #include <pangomm/fontdescription.h>
 
 
@@ -27,6 +26,21 @@ double dTransXStart{0.0}; // translation start pos
 double dTransYStart{0.0}; //
 double dBaseMoveX {0.0}; // base pos for moving the canvas
 double dBaseMoveY {0.0}; //
+
+SPoint operator - (SPoint const & p1, SPoint const & p2)
+    {
+    return {p2.x-p1.x, p2.y-p1.y};
+    }
+
+SPoint operator + (SPoint const & p1, SPoint const & p2)
+    {
+    return {p2.x+p1.x, p2.y+p1.y};
+    }
+
+SPoint operator / (SPoint const & p, double const & d)
+    {
+    return {p.x/d, p.y/d};
+    }
 
 SPoint g_tPointA;
 SPoint g_tPointB;
@@ -511,40 +525,6 @@ void CCanvas::MovePunktA(double const & x,double const & y)
          t = w / (2*M_PI) ;
     }
 
-void draw_text(Cairo::RefPtr<Cairo::Context> const & cr,
-	       int posx, int posy,
-	       std::string const & crsText, double const & scale = 1.0)
-{
-    if (!g_bShowText) return;
-
-    cr->save();
-
-//  PangoAttribute *attr = pango_attr_size_new_absolute(20 * PANGO_SCALE);
-
-  // http://developer.gnome.org/pangomm/unstable/classPango_1_1FontDescription.html
-  Pango::FontDescription font;
-
-  font.set_family("Monospace");
-  font.set_absolute_size(12.0 * PANGO_SCALE/scale);
-//  font.set_weight(Pango::WEIGHT_BOLD);
-
-  // http://developer.gnome.org/pangomm/unstable/classPango_1_1Layout.html
-  CCanvas w;
-  auto layout = w.create_pango_layout(crsText);
-
-  layout->set_font_description(font);
-  int text_width;
-  int text_height;
-
-  layout->get_pixel_size(text_width, text_height);
-
-  cr->move_to(posx-text_width/2, posy-text_height/2);
-
-  layout->show_in_cairo_context(cr);
-
-  cr->restore();
-}
-
 template<typename P>
     void MoveTo(Cairo::RefPtr<Cairo::Context> const & cr, P const & tPoint)
 	{
@@ -596,6 +576,47 @@ template<typename P>
 	}
 
 
+void draw_text(Cairo::RefPtr<Cairo::Context> const & cr,
+	       double posx, double posy,
+	       std::string const & crsText, double const & scale = 1.0)
+{
+    if (!g_bShowText) return;
+
+    cr->save();
+
+//  PangoAttribute *attr = pango_attr_size_new_absolute(20 * PANGO_SCALE);
+
+  // http://developer.gnome.org/pangomm/unstable/classPango_1_1FontDescription.html
+  Pango::FontDescription font;
+
+  font.set_family("Monospace");
+  font.set_absolute_size(12.0 * PANGO_SCALE/scale);
+//  font.set_weight(Pango::WEIGHT_BOLD);
+
+  // http://developer.gnome.org/pangomm/unstable/classPango_1_1Layout.html
+  CCanvas w;
+  auto layout = w.create_pango_layout(crsText);
+
+  layout->set_font_description(font);
+  int text_width;
+  int text_height;
+
+  layout->get_pixel_size(text_width, text_height);
+
+  cr->move_to(posx-text_width/2, posy-text_height/2);
+
+  layout->show_in_cairo_context(cr);
+
+  cr->restore();
+}
+
+void draw_text(Cairo::RefPtr<Cairo::Context> const & cr,
+	       SPoint p,
+	       std::string const & crsText, double const & scale = 1.0)
+    {
+    draw_text(cr, p.x, p.y, crsText, scale);
+    }
+
 
 void draw_ebene(Cairo::RefPtr<Cairo::Context> const & cr,
 	        SEbene const & croEbene, int nId)
@@ -646,7 +667,7 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
 		    if (i==0)
 			{
 			cr->set_source_rgb(0,0,0);
-			draw_text(cr, (A.x+B.x)/2,(A.y+B.y)/2, std::to_string((int) CalcDistance(A,B)));
+			draw_text(cr, (A+B)/2, std::to_string((int) CalcDistance(A,B)));
 			}
 		    }
 		else
@@ -659,7 +680,7 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
 			if (i==0)
 			    {
 			    cr->set_source_rgb(0,0,0);
-			    draw_text(cr, (A.x+B.x)/2,(A.y+B.y)/2, std::to_string((int) CalcDistance(A,B)));
+			    draw_text(cr, (A+B)/2, std::to_string((int) CalcDistance(A,B)));
 			    }
 			}
 		    }
@@ -668,8 +689,7 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
 	    if (i==0)
 		{
 		cr->set_source_rgb(0,0,0);
-		draw_text(cr, (G0.x+GPoint.x)/2,(G0.y+GPoint.y)/2,
-			       std::to_string((int) CalcDistance(G0, GPoint) ));
+		draw_text(cr, (G0+GPoint)/2, std::to_string((int) CalcDistance(G0, GPoint) ));
 		}
 	    cr->set_source_rgba(.5,.5,.5,.5);
 	    }
@@ -684,7 +704,7 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
 	    cr->set_line_width(2);
 	    Ring(cr,GPoint,10);
 	    cr->set_source_rgb(0,0,0);
-	    draw_text(cr, GPoint.x,GPoint.y, sId+std::to_string(i+1));
+	    draw_text(cr, GPoint, sId+std::to_string(i+1));
 	    }
 
 	cr->set_source_rgb(0,0,0);
@@ -734,10 +754,10 @@ void draw_poldreieck(Cairo::RefPtr<Cairo::Context> const & cr,
     Ring(cr, tUmkreis.MidPnt, tUmkreis.Radius);
 
     cr->set_source_rgb(0,0,0);
-    draw_text(cr,  croPD[0].x,croPD[0].y, "P12\n");
-    draw_text(cr,  croPD[1].x,croPD[1].y, "P13\n");
-    draw_text(cr,  croPD[2].x,croPD[2].y, "P23\n");
-    draw_text(cr,  croPD[0].x,croPD[0].y, "");
+    draw_text(cr, croPD[0], "P12\n");
+    draw_text(cr, croPD[1], "P13\n");
+    draw_text(cr, croPD[2], "P23\n");
+//  draw_text(cr, croPD[0], "");
     }
 
 bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
@@ -1120,28 +1140,44 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 //    cr->rotate(g_dGVS);
 
     // Buttons
-    int i{0};
+    int i{0}, nGrBtns{9};
     for ( auto const & a:m_voButtons )
 	{
 	++i;
-	cr->set_source_rgb(.8, .8, .9);
+
 	if ( a.Collision({gx,gy}) )
-	    cr->set_source_rgb(0,1,0);
-	cr->rectangle( (a.x-dTransX)/dScale, (a.y-dTransY)/dScale, (a.w)/dScale, (a.h)/dScale );
-	cr->fill();
-
-	cr->set_source_rgb(0,0,0);
-	draw_text(cr,  (a.x+a.w/2-dTransX)/dScale, (a.y+a.h/2-dTransY)/dScale, a.t, dScale);
-
-	if (i < 4)
 	    {
-	    Glib::RefPtr<Gdk::Pixbuf> image = Gdk::Pixbuf::create_from_file("buttons.png");
-	    Glib::RefPtr<Gdk::Pixbuf> imageS = image->scale_simple( (a.w)/dScale*3, (a.h)/dScale, Gdk::INTERP_BILINEAR);
+	    cr->set_source_rgb(0,1,0);
+	    cr->rectangle( (a.x-dTransX)/dScale, (a.y-dTransY)/dScale, (a.w)/dScale, (a.h)/dScale );
+	    cr->fill();
+	    }
+
+	static double lastScale{-1};
+	static Glib::RefPtr<Gdk::Pixbuf> const image  = Gdk::Pixbuf::create_from_file("buttons.png");
+	static Glib::RefPtr<Gdk::Pixbuf>       imageS = image->scale_simple( (a.w)/dScale*nGrBtns, (a.h)/dScale, Gdk::INTERP_BILINEAR);
+	if ( lastScale != dScale )
+	    {
+	    imageS = image->scale_simple( (a.w)/dScale*nGrBtns, (a.h)/dScale, Gdk::INTERP_BILINEAR);
+	    lastScale = dScale;
+	    }
+	if (i < nGrBtns+1)
+	    {
 	    Gdk::Cairo::set_source_pixbuf(cr, imageS, (a.x-a.w*(i-1)-dTransX)/dScale, (a.y-dTransY)/dScale);
 
 	    cr->rectangle( (a.x-dTransX)/dScale, (a.y-dTransY)/dScale, (a.w)/dScale, (a.h)/dScale );
 	    cr->fill();
 //	    cr->paint();
+	    }
+	else
+	    {
+	    if ( !a.Collision({gx,gy}) )
+		{
+		cr->set_source_rgb(.8, .8, .9);
+		cr->rectangle( (a.x-dTransX)/dScale, (a.y-dTransY)/dScale, (a.w)/dScale, (a.h)/dScale );
+		cr->fill();
+		}
+	    cr->set_source_rgb(0,0,0);
+	    draw_text(cr,  (a.x+a.w/2-dTransX)/dScale, (a.y+a.h/2-dTransY)/dScale, a.t, dScale);
 	    }
 	}
 
