@@ -1,6 +1,7 @@
 #ifndef __CANVAS_H
 #define __CANVAS_H
 
+#include <string>
 #include <gtkmm.h>
 #include <gtkmm/drawingarea.h>
 
@@ -22,18 +23,18 @@ struct SPointB
     template<typename T>
 	SPointB(T x, T y, bool b=false) : x(x), y(y), bCSplit(b)  {}
     double x{0}, y{0};
-    bool   bCSplit{false};
+    bool const bCSplit{false};
     };
 
 struct SButton
     {
     double x,y,w,h;
-    std::string t;
+    std::string text;
 
     SButton (double const & ix, double const & iy,
 	     double const & iw, double const & ih,
 	     std::string it)
-	: x(ix), y(iy), w(iw), h(ih), t(it)
+	: x(ix), y(iy), w(iw), h(ih), text(it)
 	{}
     bool Collision(SPointB const & p) const
 	{
@@ -57,7 +58,7 @@ class CCanvas : public Gtk::DrawingArea
         m_fSlot       = sigc::bind(sigc::mem_fun(*this, &CCanvas::Animate), 0);
         m_fConnection = Glib::signal_timeout().connect(m_fSlot, 40);
 
-        for ( int i{0}; i<10; ++i)
+        for ( int i{0}; i<11; ++i)
 	    {
 	    auto constexpr bs{38.0};
 	    auto constexpr uix{20.0},uiy{20.0},uiw{bs},uih{bs};
@@ -92,6 +93,7 @@ class CCanvas : public Gtk::DrawingArea
 	bool        m_bAnimate{true};
 	bool        m_bWithTraces{true};
 	bool        m_bRotate{false};
+	bool        m_bShowMouse{false};
 
 	// animation clock
 	double           t{0},t0{0}; // $t animation parameter

@@ -248,7 +248,7 @@ bool CCanvas::on_button_press_event(GdkEventButton *event)
 	{
 	if ( a.Collision({event->x,event->y}) )
 	    {
-	    m_oButtonPressed=a.t;
+	    m_oButtonPressed = a.text;
 	    return true;
 	    }
 	}
@@ -375,6 +375,7 @@ bool CCanvas::on_button_release_event(GdkEventButton* event)
 	if ( m_oButtonPressed == "7" )   g_bShowText      = !g_bShowText;
 	if ( m_oButtonPressed == "8" )   g_bShowHints     = !g_bShowHints;
 	if ( m_oButtonPressed == "9" )   g_bShowBlink     = !g_bShowBlink;
+	if ( m_oButtonPressed =="11" )   m_bShowMouse     = !m_bShowMouse;
 
 	m_oButtonPressed="";
 	queue_draw();
@@ -1112,6 +1113,7 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	    cr->fill();
 	    }
 
+
 	static double lastScale{-1};
 	static Glib::RefPtr<Gdk::Pixbuf> const image  = Gdk::Pixbuf::create_from_file("buttons.png");
 	static Glib::RefPtr<Gdk::Pixbuf>       imageS = image->scale_simple( (a.w)/dScale*nGrBtns, (a.h)/dScale, Gdk::INTERP_BILINEAR);
@@ -1137,7 +1139,7 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 		cr->fill();
 		}
 	    cr->set_source_rgb(0,0,0);
-	    draw_text(cr,  (a.x+a.w/2-dTransX)/dScale, (a.y+a.h/2-dTransY)/dScale, a.t, dScale);
+	    draw_text(cr,  (a.x+a.w/2-dTransX)/dScale, (a.y+a.h/2-dTransY)/dScale, a.text, dScale);
 	    }
 	}
 
@@ -1171,11 +1173,12 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
     cr->line_to((uiOffset-dTransX+2*uiBaseWd)/dScale, (uiOffset-dTransY-uiBaseWd/2+uiBaseLn-dAniGui)/dScale);
     cr->stroke();
 
-/*
-    cr->set_source_rgb(1,1,0);
-    cr->arc(gx,gy,3,0,2*M_PI);
-    cr->fill();
-*/
+    if ( m_bShowMouse )
+	{
+	cr->set_source_rgb(.75,.75,0);
+	cr->arc(gx,gy,3,0,2*M_PI);
+	cr->fill();
+	}
 
     return true;
     }
