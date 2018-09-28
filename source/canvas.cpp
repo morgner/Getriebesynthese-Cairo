@@ -231,29 +231,8 @@ void ExportSCAD( SPoint const & A0,
 //    std::cout << ote << '\n';
     }
 
-double       g_dAnimate   {0.0025};
-double const g_dAnimateMax{0.025 };
-double const g_dAnimateMin{0.0025};
-bool CCanvas::Animate(int c)
-    {
-    if (!m_bAnimate) return true;
-    if (m_bDirectionLeft)
-	t = (t<=  g_dAnimate) ? 1 : t-g_dAnimate;
-    else
-	t = (t>=1-g_dAnimate) ? 0 : t+g_dAnimate;
-    queue_draw();
-    return true;
-    }
 
 CCanvas::CCanvas()
-    : m_bFirstClick(false),
-      x1(0),y1(0),
-      x2(0),y2(0),
-      m_bDurchschlagen(false),
-      m_bDirectionLeft(true),
-      m_bAnimate(true),
-      m_bWithTraces(true),
-      m_bRotate(false)
     {
     add_events(Gdk::BUTTON_PRESS_MASK | Gdk::SCROLL_MASK | Gdk::SMOOTH_SCROLL_MASK);
     add_events(Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK);
