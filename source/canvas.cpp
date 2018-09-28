@@ -19,12 +19,10 @@ bool            g_bShowHints{true};
 bool            g_bShowBlink{true};
 double dScale  {1.0}; // scale
 bool   bTransInitialized {false}; // translation initialized?
-double dTransX {0.0}; // translation relativ pos
-double dTransY {0.0}; //
-double dTransXStart{0.0}; // translation start pos
-double dTransYStart{0.0}; //
-double dBaseMoveX {0.0}; // base pos for moving the canvas
-double dBaseMoveY {0.0}; //
+SPoint dTrans     {0.0, 0.0}; // translation relativ pos
+SPoint dTransStart{0.0, 0.0}; // translation start pos
+SPoint dBaseMove  {0.0, 0.0}; // base pos for moving the canvas
+
 
 SPoint operator - (SPoint const & p1, SPoint const & p2)
     {
@@ -36,10 +34,11 @@ SPoint operator + (SPoint const & p1, SPoint const & p2)
     return {p2.x+p1.x, p2.y+p1.y};
     }
 
-SPoint operator / (SPoint const & p, double const & d)
-    {
-    return {p.x/d, p.y/d};
-    }
+template<typename P>
+    SPoint operator / (P const & p, double const & d)
+	{
+	return {p.x/d, p.y/d};
+	}
 
 SPoint g_tPointA;
 SPoint g_tPointB;
@@ -237,7 +236,7 @@ bool CCanvas::on_key_press_event(GdkEventKey* key_event)
     {
     auto c = gdk_unicode_to_keyval (key_event->keyval);
     dScale = 1;
-    dTransX = dTransY = 0;
+    dTrans = {0.0, 0.0};
     queue_draw();
     return true;
     }
@@ -246,33 +245,30 @@ bool CCanvas::on_button_press_event(GdkEventButton *event)
     {
     for ( auto const & a:m_voButtons )
 	{
-	if ( a.Collision({event->x,event->y}) )
+	if ( a.Collision(*event) )
 	    {
 	    m_oButtonPressed = a.text;
 	    return true;
 	    }
 	}
 
-    auto const ex = event->x/dScale-dTransX/dScale;
-               dBaseMoveX = event->x;
-               dTransXStart = dTransX;
-    auto const ey = event->y/dScale-dTransY/dScale;
-               dBaseMoveY = event->y;
-               dTransYStart = dTransY;
+    SPoint e    = (dTrans - SPoint{*event})/dScale;
+    dBaseMove   = *event;
+    dTransStart = dTrans;
 
     if( (event->type == GDK_BUTTON_PRESS) && (event->button == 1) )
 	{
         if ( !m_bFirstClick )
             {
-            x1=x2=ex;
-            y1=y2=ey;
+            x1=x2=e.x;
+            y1=y2=e.y;
             }
         if (g_tCollision.eWhat == SCollision::EWhat::none)
             {
 	    switch (m_ePhase)
 		{
 		case EPhase::GrundPunkte:
-		    g_oGrundpunkt.Update({ex, ey});
+		    g_oGrundpunkt.Update(e);
 		    [[fallthrough]];
 		case EPhase::EbenenLagen:
 		    if ( !m_bFirstClick )
@@ -288,15 +284,15 @@ bool CCanvas::on_button_press_event(GdkEventButton *event)
     return true;
     }
 
-double gx{0};
-double gy{0};
+SPoint g{0.0, 0.0};
+
 bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
     {
-    auto const ex=event->x/dScale-dTransX/dScale;
-    auto const ey=event->y/dScale-dTransY/dScale;
+    auto const ex=event->x/dScale-dTrans.x/dScale;
+    auto const ey=event->y/dScale-dTrans.y/dScale;
 
-    gx=event->x;
-    gy=event->y;
+    g.x=event->x;
+    g.y=event->y;
     if ( m_oButtonPressed.size() > 0 )
 	{
 	return true;
@@ -333,8 +329,8 @@ bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
 			    break;
 
 			default:
-			    dTransX = dTransXStart - (dBaseMoveX-event->x);
-			    dTransY = dTransYStart - (dBaseMoveY-event->y);
+			    dTrans.x = dTransStart.x - (dBaseMove.x-event->x);
+			    dTrans.y = dTransStart.y - (dBaseMove.y-event->y);
 			    break;
 			}
 		    break;
@@ -396,7 +392,7 @@ bool CCanvas::on_button_release_event(GdkEventButton* event)
 	    switch (m_ePhase)
 		{
 		case EPhase::GrundPunkte:
-		    g_oGrundpunkt.Update( {event->x/dScale-dTransX/dScale, event->y/dScale-dTransY/dScale} );
+		    g_oGrundpunkt.Update( {event->x/dScale-dTrans.x/dScale, event->y/dScale-dTrans.y/dScale} );
 		    g_vGrundPunkte.emplace_back(g_oGrundpunkt);
 		    if ( g_vGrundPunkte.size()  > 1 ) { m_ePhase = EPhase::Collision; }
 		    break;
@@ -448,11 +444,11 @@ bool CCanvas::on_scroll_event(GdkEventScroll *event)
     const int width  = allocation.get_width();
     const int height = allocation.get_height();
 
-    SPoint p0{event->x/dScale-dTransX/dScale, event->y/dScale-dTransY/dScale};
+    SPoint p0{event->x/dScale-dTrans.x/dScale, event->y/dScale-dTrans.y/dScale};
     dScale *= (event->delta_y>0)?.9:1.1; if (dScale<.01) dScale=.01;
-    SPoint p1{event->x/dScale-dTransX/dScale, event->y/dScale-dTransY/dScale};
-    dTransX -= (p0.x-p1.x)*dScale;
-    dTransY -= (p0.y-p1.y)*dScale;
+    SPoint p1{event->x/dScale-dTrans.x/dScale, event->y/dScale-dTrans.y/dScale};
+    dTrans.x -= (p0.x-p1.x)*dScale;
+    dTrans.y -= (p0.y-p1.y)*dScale;
 
     queue_draw();
     return true;
@@ -732,21 +728,21 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 
     if ( false == bTransInitialized )
 	{
-	w0 = dTransX = width/2;
-	h0 = dTransY = height/2;
+	w0 = dTrans.x = width/2;
+	h0 = dTrans.y = height/2;
 	bTransInitialized = true;
 	}
     if ( (w0!=width/2) || (h0!=height/2) )
 	{
-	dTransX -= w0 - width/2;  w0 = width/2;
-	dTransY -= h0 - height/2; h0 = height/2;
+	dTrans.x -= w0 - width/2;  w0 = width/2;
+	dTrans.y -= h0 - height/2; h0 = height/2;
 	}
 
 //a    cr->save();
 
     Cairo::Matrix matrix(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
     matrix.scale(dScale,dScale);
-    matrix.translate(dTransX/dScale, dTransY/dScale);
+    matrix.translate(dTrans.x/dScale, dTrans.y/dScale);
 
     if ( m_bRotate && g_vGrundPunkte.size()>1 )
 	{
@@ -1106,10 +1102,10 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	{
 	++i;
 
-	if ( a.Collision({gx,gy}) )
+	if ( a.Collision({g.x,g.y}) )
 	    {
 	    cr->set_source_rgb(0,1,0);
-	    cr->rectangle( (a.x-dTransX)/dScale, (a.y-dTransY)/dScale, (a.w)/dScale, (a.h)/dScale );
+	    cr->rectangle( (a.x-dTrans.x)/dScale, (a.y-dTrans.y)/dScale, (a.w)/dScale, (a.h)/dScale );
 	    cr->fill();
 	    }
 
@@ -1124,22 +1120,22 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	    }
 	if (i < nGrBtns+1)
 	    {
-	    Gdk::Cairo::set_source_pixbuf(cr, imageS, (a.x-a.w*(i-1)-dTransX)/dScale, (a.y-dTransY)/dScale);
+	    Gdk::Cairo::set_source_pixbuf(cr, imageS, (a.x-a.w*(i-1)-dTrans.x)/dScale, (a.y-dTrans.y)/dScale);
 
-	    cr->rectangle( (a.x-dTransX)/dScale, (a.y-dTransY)/dScale, (a.w)/dScale, (a.h)/dScale );
+	    cr->rectangle( (a.x-dTrans.x)/dScale, (a.y-dTrans.y)/dScale, (a.w)/dScale, (a.h)/dScale );
 	    cr->fill();
 //	    cr->paint();
 	    }
 	else
 	    {
-	    if ( !a.Collision({gx,gy}) )
+	    if ( !a.Collision({g.x,g.y}) )
 		{
 		cr->set_source_rgb(.8, .8, .9);
-		cr->rectangle( (a.x-dTransX)/dScale, (a.y-dTransY)/dScale, (a.w)/dScale, (a.h)/dScale );
+		cr->rectangle( (a.x-dTrans.x)/dScale, (a.y-dTrans.y)/dScale, (a.w)/dScale, (a.h)/dScale );
 		cr->fill();
 		}
 	    cr->set_source_rgb(0,0,0);
-	    draw_text(cr,  (a.x+a.w/2-dTransX)/dScale, (a.y+a.h/2-dTransY)/dScale, a.text, dScale);
+	    draw_text(cr,  (a.x+a.w/2-dTrans.x)/dScale, (a.y+a.h/2-dTrans.y)/dScale, a.text, dScale);
 	    }
 	}
 
@@ -1151,32 +1147,32 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 
     cr->set_line_width(uiBaseWd/dScale);
 
-    cr->move_to((uiOffset-dTransX)/dScale, (uiOffset-dTransY         )/dScale);
-    cr->line_to((uiOffset-dTransX)/dScale, (uiOffset-dTransY+uiBaseLn)/dScale);
+    cr->move_to((uiOffset-dTrans.x)/dScale, (uiOffset-dTrans.y         )/dScale);
+    cr->line_to((uiOffset-dTrans.x)/dScale, (uiOffset-dTrans.y+uiBaseLn)/dScale);
     cr->stroke();
 
 
     cr->set_line_width(5.0/dScale);
 
-    cr->move_to((uiOffset-dTransX           )/dScale, (uiOffset-dTransY+uiBaseWd/2)/dScale);
-    cr->line_to((uiOffset-dTransX+2*uiBaseWd)/dScale, (uiOffset-dTransY+uiBaseWd/2)/dScale);
+    cr->move_to((uiOffset-dTrans.x           )/dScale, (uiOffset-dTrans.y+uiBaseWd/2)/dScale);
+    cr->line_to((uiOffset-dTrans.x+2*uiBaseWd)/dScale, (uiOffset-dTrans.y+uiBaseWd/2)/dScale);
     cr->stroke();
 
-    cr->move_to((uiOffset-dTransX           )/dScale, (uiOffset-dTransY-uiBaseWd/2+uiBaseLn)/dScale);
-    cr->line_to((uiOffset-dTransX+2*uiBaseWd)/dScale, (uiOffset-dTransY-uiBaseWd/2+uiBaseLn)/dScale);
+    cr->move_to((uiOffset-dTrans.x           )/dScale, (uiOffset-dTrans.y-uiBaseWd/2+uiBaseLn)/dScale);
+    cr->line_to((uiOffset-dTrans.x+2*uiBaseWd)/dScale, (uiOffset-dTrans.y-uiBaseWd/2+uiBaseLn)/dScale);
     cr->stroke();
 
     cr->set_source_rgb(0,1,0);
     cr->set_line_width(1.5/dScale);
 
-    cr->move_to((uiOffset-dTransX           )/dScale, (uiOffset-dTransY-uiBaseWd/2+uiBaseLn-dAniGui)/dScale);
-    cr->line_to((uiOffset-dTransX+2*uiBaseWd)/dScale, (uiOffset-dTransY-uiBaseWd/2+uiBaseLn-dAniGui)/dScale);
+    cr->move_to((uiOffset-dTrans.x           )/dScale, (uiOffset-dTrans.y-uiBaseWd/2+uiBaseLn-dAniGui)/dScale);
+    cr->line_to((uiOffset-dTrans.x+2*uiBaseWd)/dScale, (uiOffset-dTrans.y-uiBaseWd/2+uiBaseLn-dAniGui)/dScale);
     cr->stroke();
 
     if ( m_bShowMouse )
 	{
 	cr->set_source_rgb(.75,.75,0);
-	cr->arc(gx,gy,3,0,2*M_PI);
+	cr->arc(g.x,g.y,3,0,2*M_PI);
 	cr->fill();
 	}
 

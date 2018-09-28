@@ -22,6 +22,8 @@ struct SPointB
     SPointB() = default;
     template<typename T>
 	SPointB(T x, T y, bool b=false) : x(x), y(y), bCSplit(b)  {}
+    template<typename T>
+	SPointB(T const & t) : x(t.x), y(t.y) {}
     double x{0}, y{0};
     bool const bCSplit{false};
     };

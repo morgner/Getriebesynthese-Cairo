@@ -16,6 +16,8 @@ struct SPoint
     {
     SPoint() = default;
     SPoint(double const & x, double const & y) : x(x), y(y) {}
+    template<typename T>
+	SPoint(T const & t) : x(t.x), y(t.y) {}
     double x{0}, y{0};
     };
 
