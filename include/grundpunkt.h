@@ -1,27 +1,15 @@
 #ifndef __GRUNDPUNKT_H
 #define __GRUNDPUNKT_H
 
-/*
-#include <fstream>
-#include <iostream>     // std::cout
-#include <algorithm>
-#include <regex>
-#include <map>
-#include <utility>      // std::pair
-
-#include <string>       // std::string
-#include <streambuf>
-#include <sstream>      // std::ostringstream
-*/
 
 #include <vector>
 #include <array>
+#include <math.h>
 #include "te.h"
 
-#include <gtkmm/drawingarea.h> // Cairo
+using namespace std::string_literals;
 
-using namespace std::string_literals; 
-using TRenderer=Cairo::RefPtr<Cairo::Context>;
+using TRenderer = Cairo::RefPtr<Cairo::Context>;
 
 
 struct SPoint
@@ -53,10 +41,10 @@ using A3Gelenke    = std::array<SPoint, 3>;
 
 SEbene FixedLenLine(SEbene & roL, double const & crnLenEbene, bool const & crbFirst = true)
     {
-    double const dx   = roL.x1 - roL.x2;
-    double const dy   = roL.y1 - roL.y2;
-    double const nLen = sqrt(dx*dx + dy*dy);
-    double const q    = (double)crnLenEbene / ((nLen!=0)?nLen:1);
+    auto const dx   { roL.x1 - roL.x2 };
+    auto const dy   { roL.y1 - roL.y2 };
+    auto const nLen { sqrt(dx*dx + dy*dy) };
+    auto const q    { (double)crnLenEbene / ((nLen!=0)?nLen:1) };
     if (crbFirst)
         {
         roL.x2 = roL.x1 - dx*q;
@@ -72,21 +60,19 @@ SEbene FixedLenLine(SEbene & roL, double const & crnLenEbene, bool const & crbFi
 
 SPoint Intersection(SEbene const & E1, SEbene const & E2)
     {
-    double dx1, dx2, m1, n1, m2, n2;
+    auto const dx1 { E1.x2 - E1.x1 };
+    auto const dx2 { E2.x2 - E2.x1 };
 
-    dx1 = E1.x2 - E1.x1;
-    dx2 = E2.x2 - E2.x1;
-
-    m1 = (E1.y2 - E1.y1) / dx1; // Steigungen ermitteln
-    m2 = (E2.y2 - E2.y1) / dx2;
+    auto const m1 { (E1.y2 - E1.y1) / dx1 }; // Steigungen ermitteln
+    auto const m2 { (E2.y2 - E2.y1) / dx2 };
 
     // if (ROUND(m1,MAX_ACCURACY)==ROUND(m2,MAX_ACCURACY)) return false; // Geraden sind parallel
 
-    n1 = E1.y1 - (m1*E1.x1); // Abstände von X-Achse ermitteln
-    n2 = E2.y1 - (m2*E2.x1);
+    auto const n1 { E1.y1 - (m1*E1.x1) }; // Abstände von X-Achse ermitteln
+    auto const n2 { E2.y1 - (m2*E2.x1) };
 
-    double x = (n2-n1)/(m1-m2); // Schnittpunktkoordinate berechnen
-    double y = m1*x+n1;
+    auto const  x { (n2-n1)/(m1-m2) }; // Schnittpunktkoordinate berechnen
+    auto const  y { m1*x+n1 };
 
     return { x, y };
   } // Intersection
@@ -97,11 +83,10 @@ SEbene Perpendicle(SEbene const & croLine)
     auto const dx = (croLine.x2 - croLine.x1)/2.0;
     auto const dy = (croLine.y2 - croLine.y1)/2.0;
 
-    SEbene I;
-    I.x1 = croLine.x2 - dy - dx;
-    I.y1 = croLine.y2 + dx - dy;
-    I.x2 = croLine.x2 + dy - dx;
-    I.y2 = croLine.y2 - dx - dy;
+    SEbene I{ croLine.x2 - dy - dx,
+	      croLine.y2 + dx - dy,
+	      croLine.x2 + dy - dx,
+	      croLine.y2 - dx - dy};
 
     return std::move(I);
     }
@@ -111,15 +96,14 @@ SPoint PointMirror(TRenderer const & cr, SPoint const & croPoint, SEbene const &
     auto const dx = (croMirror.x2 - croMirror.x1)/2.0;
     auto const dy = (croMirror.y2 - croMirror.y1)/2.0;
 
-    SEbene I;
-    I.x1 = croPoint.x - dy - 0*dx;
-    I.y1 = croPoint.y + dx - 0*dy;
-    I.x2 = croPoint.x + dy - 0*dx;
-    I.y2 = croPoint.y - dx - 0*dy;
+    SEbene I{ croPoint.x - dy,
+	      croPoint.y + dx,
+	      croPoint.x + dy,
+	      croPoint.y - dx };
 
-    auto const S  = Intersection(croMirror, I);
-    auto const mx = (croMirror.x2 + croMirror.x1)/2.0;
-    auto const my = (croMirror.y2 + croMirror.y1)/2.0;
+    auto const S  { Intersection(croMirror, I) };
+    auto const mx { (croMirror.x2 + croMirror.x1)/2.0 };
+    auto const my { (croMirror.y2 + croMirror.y1)/2.0 };
 
     return { S.x + (S.x - croPoint.x), S.y + (S.y - croPoint.y) };
     }
@@ -139,6 +123,7 @@ SUmkreis Umkreis( SPoint const & P1, SPoint const & P2, SPoint const & P3 )
     {
     SEbene const L1{ P1.x, P1.y, P2.x, P2.y };
     auto   const La{ Perpendicle(L1) };
+
     SEbene const L2{ P1.x, P1.y, P3.x, P3.y };
     auto   const Lb{ Perpendicle(L2) };
 

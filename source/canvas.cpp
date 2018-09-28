@@ -3,7 +3,6 @@
 #include <string>
 #include <array>
 #include <math.h>
-#include <gtkmm.h>
 #include <pangomm/fontdescription.h>
 
 
@@ -232,24 +231,6 @@ void ExportSCAD( SPoint const & A0,
     }
 
 
-CCanvas::CCanvas()
-    {
-    add_events(Gdk::BUTTON_PRESS_MASK | Gdk::SCROLL_MASK | Gdk::SMOOTH_SCROLL_MASK);
-    add_events(Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK);
-    add_events(Gdk::BUTTON1_MOTION_MASK | Gdk::BUTTON_PRESS_MASK | Gdk::POINTER_MOTION_MASK);
-    add_events(Gdk::KEY_PRESS_MASK | Gdk::KEY_RELEASE_MASK);
-
-    m_fSlot       = sigc::bind(sigc::mem_fun(*this, &CCanvas::Animate), 0);
-    m_fConnection = Glib::signal_timeout().connect(m_fSlot, 40);
-
-    for ( int i{0}; i<10; ++i)
-	{
-	auto constexpr bs{38.0};
-	auto constexpr uix{20.0},uiy{20.0},uiw{bs},uih{bs};
-	auto constexpr bo{8.0};
-	m_voButtons.emplace_back( 72+uix+i*(uiw+bo), uiy, uiw, uih, std::to_string(i) );
-	}
-    }
 
 
 bool CCanvas::on_key_press_event(GdkEventKey* key_event)
@@ -384,8 +365,8 @@ bool CCanvas::on_button_release_event(GdkEventButton* event)
     {
     if ( m_oButtonPressed.size() > 0 )
 	{
-	if ( m_oButtonPressed == "0" ) { g_dAnimate *= 0.9; g_dAnimate = (g_dAnimate<g_dAnimateMin)?g_dAnimateMin:g_dAnimate; }
-	if ( m_oButtonPressed == "1" ) { g_dAnimate *= 1.1; g_dAnimate = (g_dAnimate>g_dAnimateMax)?g_dAnimateMax:g_dAnimate; }
+	if ( m_oButtonPressed == "0" ) { m_dAnimate *= 0.9; m_dAnimate = (m_dAnimate<m_dAnimateMin)?m_dAnimateMin:m_dAnimate; }
+	if ( m_oButtonPressed == "1" ) { m_dAnimate *= 1.1; m_dAnimate = (m_dAnimate>m_dAnimateMax)?m_dAnimateMax:m_dAnimate; }
 	if ( m_oButtonPressed == "2" ) { m_bDurchschlagen = !m_bDurchschlagen; m_vSpurE1.clear(); m_vSpurE2.clear(); t0 = 0;  }
 	if ( m_oButtonPressed == "3" )   m_bDirectionLeft = !m_bDirectionLeft;
 	if ( m_oButtonPressed == "4" )   m_bAnimate       = !m_bAnimate;
@@ -1060,7 +1041,7 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 		m_vSpurE1.emplace_back(SPointB{be1.x,be1.y,g_bCSplit});
 		m_vSpurE2.emplace_back(SPointB{be2.x,be2.y,g_bCSplit});
 		}
-	    if (t0<=1.1) t0 += g_dAnimate;
+	    if (t0<=1.1) t0 += m_dAnimate;
 //	    std::cout << "i: " << t0*360 << " c: " << m_vSpurE1.size() << '\n';
 	    cr->set_source_rgb(0,0,0);
 
@@ -1114,7 +1095,7 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
     auto constexpr uiBaseWd{  8.0};
     auto constexpr uiBaseLn{128.0};
 
-    auto const dAniGui = (uiBaseLn-2*uiBaseWd)*g_dAnimate/(g_dAnimateMax-g_dAnimateMin);
+    auto const dAniGui = (uiBaseLn-2*uiBaseWd)*m_dAnimate/(m_dAnimateMax-m_dAnimateMin);
 
 //    cr->rotate(g_dGVS);
 

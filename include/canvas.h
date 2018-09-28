@@ -1,6 +1,7 @@
 #ifndef __CANVAS_H
 #define __CANVAS_H
 
+#include <gtkmm.h>
 #include <gtkmm/drawingarea.h>
 
 struct SCollision
@@ -46,7 +47,26 @@ using VButtons     = std::vector<SButton>;
 class CCanvas : public Gtk::DrawingArea
     {
     public:
-	CCanvas();
+    CCanvas()
+        {
+        add_events(Gdk::BUTTON_PRESS_MASK | Gdk::SCROLL_MASK | Gdk::SMOOTH_SCROLL_MASK);
+        add_events(Gdk::BUTTON_PRESS_MASK | Gdk::BUTTON_RELEASE_MASK);
+        add_events(Gdk::BUTTON1_MOTION_MASK | Gdk::BUTTON_PRESS_MASK | Gdk::POINTER_MOTION_MASK);
+        add_events(Gdk::KEY_PRESS_MASK | Gdk::KEY_RELEASE_MASK);
+
+        m_fSlot       = sigc::bind(sigc::mem_fun(*this, &CCanvas::Animate), 0);
+        m_fConnection = Glib::signal_timeout().connect(m_fSlot, 40);
+
+        for ( int i{0}; i<10; ++i)
+	    {
+	    auto constexpr bs{38.0};
+	    auto constexpr uix{20.0},uiy{20.0},uiw{bs},uih{bs};
+	    auto constexpr bo{8.0};
+	    m_voButtons.emplace_back( 72+uix+i*(uiw+bo), uiy, uiw, uih, std::to_string(i) );
+	    }
+        }
+
+
 	virtual ~CCanvas() {m_fConnection.disconnect();};
 	void MoveEbenenPunkt(double const & x,double const & y,double const & L);
 	void MovePunktA(double const & x,double const & y);
@@ -61,6 +81,7 @@ class CCanvas : public Gtk::DrawingArea
 	bool on_key_press_event(GdkEventKey* key_event) override;
 
     private:
+	double      m_nLenEbene{0};
 
 	bool        m_bFirstClick{false};
 
@@ -77,23 +98,24 @@ class CCanvas : public Gtk::DrawingArea
 	sigc::slot<bool> m_fSlot;
 	sigc::connection m_fConnection;
 
-	double       g_dAnimate   {0.0025};
-	double const g_dAnimateMax{0.025 };
-	double const g_dAnimateMin{0.0025};
+	double       m_dAnimate   {0.0025};
+	double const m_dAnimateMax{0.025 };
+	double const m_dAnimateMin{0.0025};
 	bool Animate(int c)
 	    {
 	    if (!m_bAnimate) return true;
 	    if (m_bDirectionLeft)
-		t = (t<=  g_dAnimate) ? 1 : t-g_dAnimate;
+		t = (t <=  m_dAnimate) ? 1 : t-m_dAnimate;
 	    else
-		t = (t>=1-g_dAnimate) ? 0 : t+g_dAnimate;
+		t = (t >=1-m_dAnimate) ? 0 : t+m_dAnimate;
 	    queue_draw();
 	    return true;
 	    }
-
+	// koppelkurveb
 	std::vector<SPointB> m_vSpurE1;
 	std::vector<SPointB> m_vSpurE2;
 
+	/// mouse parameters
 	enum class EPhase
 	    {
 	    EbenenLagen,
@@ -101,9 +123,6 @@ class CCanvas : public Gtk::DrawingArea
 	    Collision,
 	    } m_ePhase = EPhase::EbenenLagen;
 
-	double m_nLenEbene{0};
-
-	//two coordinates
 	double x1{0};
 	double y1{0};
 	double x2{0};
