@@ -3,7 +3,6 @@
 
 #include "getrgeomath.h"
 
-// #include <string>
 #include <gtkmm.h>
 #include <gtkmm/drawingarea.h>
 
@@ -11,20 +10,21 @@
 struct SButton
     {
     double x,y,w,h;
-    std::string text;
+    std::string const text;
 
     SButton (double const & ix, double const & iy,
 	     double const & iw, double const & ih,
-	     std::string it)
-	: x(ix), y(iy), w(iw), h(ih), text(it)
+	     std::string const  s)
+	: x(ix), y(iy), w(iw), h(ih), text(s)
 	{}
+
     bool Collision(SPoint const & p) const
 	{
 	return ( p.x > x && p.x < x+w && p.y > y && p.y < y+h );
 	}
     };
 
-using VButtons     = std::vector<SButton>;
+using VButtons = std::vector<SButton>;
 
 
 class CCanvas : public Gtk::DrawingArea
@@ -49,8 +49,8 @@ class CCanvas : public Gtk::DrawingArea
 	    }
         }
 
+	virtual ~CCanvas() { m_fConnection.disconnect(); };
 
-	virtual ~CCanvas() {m_fConnection.disconnect();};
 	void MoveEbenenPunkt(SPoint const & mp, double const & L);
 	void MovePunktA(SPoint const & tPointsTo);
 
@@ -69,7 +69,7 @@ class CCanvas : public Gtk::DrawingArea
 	bool        m_bFirstClick{false};
 
 	VButtons    m_voButtons;	// button bar
-	std::string m_oButtonPressed;
+	std::string m_oButtonPressed{""};
 	bool        m_bDurchschlagen{false};
 	bool        m_bDirectionLeft{true};
 	bool        m_bAnimate{true};
@@ -78,24 +78,26 @@ class CCanvas : public Gtk::DrawingArea
 	bool        m_bShowMouse{false};
 
 	// animation clock
-	double           t{0},t0{0}; // $t animation parameter
+	double           m_tAnimator{0}; // $m_tAnimator animation parameter
+	double           m_tAnimStep{0}; // intermediate animation parameter
 	sigc::slot<bool> m_fSlot;
 	sigc::connection m_fConnection;
 
-	double       m_dAnimate   {0.0025};
-	double const m_dAnimateMax{0.025 };
-	double const m_dAnimateMin{0.0025};
+	double           m_dAnimate   {0.0025}; // animation steps width
+	double const     m_dAnimateMax{0.0250}; // minimal animation step width
+	double const     m_dAnimateMin{0.0025}; // maximal animation step width
 	bool Animate(int c)
 	    {
 	    if (!m_bAnimate) return true;
 	    if (m_bDirectionLeft)
-		t = (t <=  m_dAnimate) ? 1 : t-m_dAnimate;
+		m_tAnimator = (m_tAnimator <=  m_dAnimate) ? 1 : m_tAnimator-m_dAnimate;
 	    else
-		t = (t >=1-m_dAnimate) ? 0 : t+m_dAnimate;
+		m_tAnimator = (m_tAnimator >=1-m_dAnimate) ? 0 : m_tAnimator+m_dAnimate;
 	    queue_draw();
 	    return true;
 	    }
-	// koppelkurveb
+
+	// koppelkurven
 	std::vector<SPointT> m_vSpurE1;
 	std::vector<SPointT> m_vSpurE2;
 
@@ -111,7 +113,6 @@ class CCanvas : public Gtk::DrawingArea
 	double y1{0};
 	double x2{0};
 	double y2{0};
-
 
     }; // class CCanvas
 

@@ -161,7 +161,7 @@ void CCanvas::MovePunktA(SPoint const & tPointsTo)
 
     SPoint const & A0 = g_vGrundPunkte[0].G0();
     auto w = CalcVectorSlope(A0, tPointsTo) + M_PI/2;
-         t = w / (2*M_PI) ;
+         m_tAnimator = w / (2*M_PI) ;
     }
 
 void CCanvas::MoveEbenenPunkt(SPoint const & mp, double const & L)
@@ -316,7 +316,7 @@ bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
 	    	{
 	    	m_vSpurE1.clear();
 	    	m_vSpurE2.clear();
-	    	t0 = 0;
+	    	m_tAnimStep = 0;
 	    	}
 	    switch (g_tCollision.eWhat)
 		case SCollision::EWhat::none:
@@ -373,10 +373,10 @@ bool CCanvas::on_button_release_event(GdkEventButton* event)
 	{
 	if ( m_oButtonPressed == "0" ) { m_dAnimate *= 0.9; m_dAnimate = (m_dAnimate<m_dAnimateMin)?m_dAnimateMin:m_dAnimate; }
 	if ( m_oButtonPressed == "1" ) { m_dAnimate *= 1.1; m_dAnimate = (m_dAnimate>m_dAnimateMax)?m_dAnimateMax:m_dAnimate; }
-	if ( m_oButtonPressed == "2" ) { m_bDurchschlagen = !m_bDurchschlagen; m_vSpurE1.clear(); m_vSpurE2.clear(); t0 = 0;  }
+	if ( m_oButtonPressed == "2" ) { m_bDurchschlagen = !m_bDurchschlagen; m_vSpurE1.clear(); m_vSpurE2.clear(); m_tAnimStep = 0;  }
 	if ( m_oButtonPressed == "3" )   m_bDirectionLeft = !m_bDirectionLeft;
 	if ( m_oButtonPressed == "4" )   m_bAnimate       = !m_bAnimate;
-	if ( m_oButtonPressed == "5" ) { m_bWithTraces    = !m_bWithTraces; m_vSpurE1.clear(); m_vSpurE2.clear(); t0 = 0; }
+	if ( m_oButtonPressed == "5" ) { m_bWithTraces    = !m_bWithTraces; m_vSpurE1.clear(); m_vSpurE2.clear(); m_tAnimStep = 0; }
 	if ( m_oButtonPressed == "6" )   m_bRotate        = !m_bRotate;
 	if ( m_oButtonPressed == "7" )   g_bShowText      = !g_bShowText;
 	if ( m_oButtonPressed == "8" )   g_bShowHints     = !g_bShowHints;
@@ -392,7 +392,7 @@ bool CCanvas::on_button_release_event(GdkEventButton* event)
 	{
 	m_vSpurE1.clear();
 	m_vSpurE2.clear();
-	t0 = 0;
+	m_tAnimStep = 0;
 	}
 
     if (g_tCollision.eWhat == SCollision::EWhat::none)
@@ -886,8 +886,8 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	double lw=7;
 	cr->set_line_width(lw);
 
-	auto const S = sin(t*2*M_PI);
-	auto const C = cos(t*2*M_PI);
+	auto const S = sin(m_tAnimator*2*M_PI);
+	auto const C = cos(m_tAnimator*2*M_PI);
 	auto const & A0{g_vGrundPunkte[0].G0()};
 	auto const & A1 {g_vGrundPunkte[0].GPoint(0)};
 	auto const & A2 {g_vGrundPunkte[0].GPoint(1)};
@@ -1025,12 +1025,12 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 
 	if ( m_bWithTraces )
 	    {
-	    if (360*t0+1 > m_vSpurE1.size())
+	    if (360*m_tAnimStep+1 > m_vSpurE1.size())
 		{
 		m_vSpurE1.emplace_back(SPointT{be1.x,be1.y,g_bCSplit});
 		m_vSpurE2.emplace_back(SPointT{be2.x,be2.y,g_bCSplit});
 		}
-	    if (t0<=1.1) t0 += m_dAnimate;
+	    if (m_tAnimStep<=1.1) m_tAnimStep += m_dAnimate;
 	    cr->set_source_rgb(0,0,0);
 
 	    cr->set_line_width(2);
