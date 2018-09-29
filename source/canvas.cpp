@@ -288,11 +288,11 @@ SPoint g{0.0, 0.0};
 
 bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
     {
-    auto const ex=event->x/dScale-dTrans.x/dScale;
-    auto const ey=event->y/dScale-dTrans.y/dScale;
+//    auto const e.x=event->x/dScale-dTrans.x/dScale;
+    auto const e{ (dTrans - SPointB{*event})/dScale };
 
-    g.x=event->x;
-    g.y=event->y;
+
+    g = *event;
     if ( m_oButtonPressed.size() > 0 )
 	{
 	return true;
@@ -313,8 +313,8 @@ bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
 		    switch (m_ePhase)
 			{
 			case EPhase::EbenenLagen:
-			    x2=ex;
-			    y2=ey;
+			    x2=e.x;
+			    y2=e.y;
 			    if ( m_nLenEbene != 0.0 )
 				{
 				SEbene tEbene{x1, y1, x2, y2};
@@ -325,7 +325,7 @@ bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
 			    break;
 
 			case EPhase::GrundPunkte:
-			    g_oGrundpunkt.Update({ex, ey});
+			    g_oGrundpunkt.Update(e);
 			    break;
 
 			default:
@@ -336,21 +336,21 @@ bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
 		    break;
 
 		case SCollision::EWhat::A:
-		    MovePunktA(ex+dmosx/dScale, ey+dmosy/dScale);
+		    MovePunktA(e.x+dmosx/dScale, e.y+dmosy/dScale);
 		    break;
 
 		case SCollision::EWhat::Ebene:
-		    MoveEbenenPunkt(ex+dmosx/dScale, ey+dmosy/dScale, m_nLenEbene);
+		    MoveEbenenPunkt(e.x+dmosx/dScale, e.y+dmosy/dScale, m_nLenEbene);
 		    break;
 
 		case SCollision::EWhat::Grundpunkt:
-		    g_vGrundPunkte[g_tCollision.nIndex].Update({ex+dCollisionOffsetX/dScale, ey+dCollisionOffsetY/dScale});
+		    g_vGrundPunkte[g_tCollision.nIndex].Update({e.x+dCollisionOffsetX/dScale, e.y+dCollisionOffsetY/dScale});
 		    break;
 		}
 	    }
 	else
 	    {
-	    g_tCollision = MouseCollision({ex, ey});
+	    g_tCollision = MouseCollision({e.x, e.y});
 	    }
 
     queue_draw(); // to be deleted
