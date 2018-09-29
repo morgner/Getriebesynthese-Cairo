@@ -51,8 +51,8 @@ class CCanvas : public Gtk::DrawingArea
 
 
 	virtual ~CCanvas() {m_fConnection.disconnect();};
-	void MoveEbenenPunkt(double const & x,double const & y,double const & L);
-	void MovePunktA(double const & x,double const & y);
+	void MoveEbenenPunkt(SPoint const & mp, double const & L);
+	void MovePunktA(SPoint const & tPointsTo);
 
     protected:
 	//Override default signal handler:

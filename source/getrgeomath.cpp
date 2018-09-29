@@ -6,12 +6,12 @@ using VGelenke     = std::vector<SPoint>;
 using A3Gelenke    = std::array<SPoint, 3>;
 
 
-SEbene FixedLenLine(SEbene & roL, double const & crnLenEbene, bool const & crbFirst)
+SEbene FixedLenLine(SLine & roL, double const & crnLen, bool const & crbFirst)
     {
     auto const dx   { roL.x1 - roL.x2 };
     auto const dy   { roL.y1 - roL.y2 };
     auto const nLen { sqrt(dx*dx + dy*dy) };
-    auto const q    { (double)crnLenEbene / ((nLen!=0)?nLen:1) };
+    auto const q    { (double)crnLen / ((nLen!=0)?nLen:1) };
     if (crbFirst)
         {
         roL.x2 = roL.x1 - dx*q;
@@ -27,7 +27,7 @@ SEbene FixedLenLine(SEbene & roL, double const & crnLenEbene, bool const & crbFi
 
 
 
-SPoint Intersection(SEbene const & E1, SEbene const & E2)
+SPoint Intersection(SLine const & E1, SLine const & E2)
     {
     auto const dx1 { E1.x2 - E1.x1 };
     auto const dx2 { E2.x2 - E2.x1 };
@@ -47,7 +47,7 @@ SPoint Intersection(SEbene const & E1, SEbene const & E2)
   } // Intersection
 
 
-SEbene Perpendicle(SEbene const & croLine)
+SEbene Perpendicle(SLine const & croLine)
     {
     auto const dx = (croLine.x2 - croLine.x1)/2.0;
     auto const dy = (croLine.y2 - croLine.y1)/2.0;
@@ -60,7 +60,7 @@ SEbene Perpendicle(SEbene const & croLine)
     return std::move(I);
     }
 
-SPoint PointMirror(SPoint const & croPoint, SEbene const & croMirror)
+SPoint PointMirror(SPoint const & croPoint, SLine const & croMirror)
     {
     auto const dx = (croMirror.x2 - croMirror.x1)/2.0;
     auto const dy = (croMirror.y2 - croMirror.y1)/2.0;

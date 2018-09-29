@@ -24,22 +24,6 @@ SPoint dTransStart{0.0, 0.0}; // translation start pos
 SPoint dBaseMove  {0.0, 0.0}; // base pos for moving the canvas
 
 
-SPoint operator - (SPoint const & p1, SPoint const & p2)
-    {
-    return {p2.x-p1.x, p2.y-p1.y};
-    }
-
-SPoint operator + (SPoint const & p1, SPoint const & p2)
-    {
-    return {p2.x+p1.x, p2.y+p1.y};
-    }
-
-template<typename P>
-    SPoint operator / (P const & p, double const & d)
-	{
-	return {p.x/d, p.y/d};
-	}
-
 SPoint g_tPointA;
 SPoint g_tPointB;
 bool   g_bCSplit{false};
@@ -171,25 +155,27 @@ SCollision MouseCollision(SPoint const & crtMousePoint)
     return std::move(ac);
     }
 
-void CCanvas::MovePunktA(double const & x,double const & y)
+void CCanvas::MovePunktA(SPoint const & tPointsTo)
     {
+    if ( g_vGrundPunkte.size() < 1 ) return;
+
     SPoint const & A0 = g_vGrundPunkte[0].G0();
-    auto w = CalcVectorSlope(A0, {x,y}) + M_PI/2;
+    auto w = CalcVectorSlope(A0, tPointsTo) + M_PI/2;
          t = w / (2*M_PI) ;
     }
 
-void CCanvas::MoveEbenenPunkt(double const & x,double const & y,double const & L)
+void CCanvas::MoveEbenenPunkt(SPoint const & mp, double const & L)
     {
     SEbene & er = g_vEbenenLagen[g_tCollision.nIndex];
 
     SEbene tL{};
-    if ( g_tCollision.nSubIx == 0 ) tL = {x,y,er.x2,er.y2};
-    if ( g_tCollision.nSubIx == 1 ) tL = {er.x1,er.y1,x,y};
+    if ( g_tCollision.nSubIx == 0 ) tL = {mp.x,mp.y,er.x2,er.y2};
+    if ( g_tCollision.nSubIx == 1 ) tL = {er.x1,er.y1,mp.x,mp.y};
     if ( g_tCollision.nSubIx == 2 )
 	{
 	SPoint m = er.M();
-	auto dx = m.x - x;
-	auto dy = m.y - y;
+	auto const dx = m.x - mp.x;
+	auto const dy = m.y - mp.y;
 	er = {er.x1-dx,er.y1-dy,er.x2-dx,er.y2-dy};
 	}
     else
@@ -278,7 +264,7 @@ bool CCanvas::on_button_press_event(GdkEventButton *event)
 	    }
 	}
 
-    SPoint e    = (dTrans - SPoint{*event})/dScale;
+    SPoint e    = (SPoint{*event} - dTrans)/dScale;
     dBaseMove   = *event;
     dTransStart = dTrans;
 
@@ -315,8 +301,7 @@ SPoint g{0.0, 0.0};
 bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
     {
 //    auto const e.x=event->x/dScale-dTrans.x/dScale;
-    auto const e{ (dTrans - SPoint{*event})/dScale };
-
+    auto const e{ (SPoint{*event} - dTrans)/dScale };
 
     g = *event;
     if ( m_oButtonPressed.size() > 0 )
@@ -355,28 +340,27 @@ bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
 			    break;
 
 			default:
-			    dTrans.x = dTransStart.x - (dBaseMove.x-event->x);
-			    dTrans.y = dTransStart.y - (dBaseMove.y-event->y);
+			    dTrans = dTransStart - (dBaseMove - *event);
 			    break;
 			}
 		    break;
 
 		case SCollision::EWhat::A:
-		    MovePunktA(e.x+dmos.x/dScale, e.y+dmos.y/dScale);
+		    MovePunktA(e+dmos/dScale);
 		    break;
 
 		case SCollision::EWhat::Ebene:
-		    MoveEbenenPunkt(e.x+dmos.x/dScale, e.y+dmos.y/dScale, m_nLenEbene);
+		    MoveEbenenPunkt(e+dmos/dScale, m_nLenEbene);
 		    break;
 
 		case SCollision::EWhat::Grundpunkt:
-		    g_vGrundPunkte[g_tCollision.nIndex].Update({e.x+dCollisionOffset.x/dScale, e.y+dCollisionOffset.y/dScale});
+		    g_vGrundPunkte[g_tCollision.nIndex].Update(e+dCollisionOffset/dScale);
 		    break;
 		}
 	    }
 	else
 	    {
-	    g_tCollision = MouseCollision({e.x, e.y});
+	    g_tCollision = MouseCollision(e);
 	    }
 
     queue_draw(); // to be deleted
@@ -428,8 +412,8 @@ bool CCanvas::on_button_release_event(GdkEventButton* event)
 		    x1 = y1 = x2 = y2 = 0;
 		    if ( g_vEbenenLagen.size() == 1 )
 			{
-			int dx = g_vEbenenLagen[0].x1 - g_vEbenenLagen[0].x2;
-			int dy = g_vEbenenLagen[0].y1 - g_vEbenenLagen[0].y2;
+			double dx = g_vEbenenLagen[0].x1 - g_vEbenenLagen[0].x2;
+			double dy = g_vEbenenLagen[0].y1 - g_vEbenenLagen[0].y2;
 			m_nLenEbene = sqrt( dx*dx + dy*dy );
 			}
 
@@ -470,11 +454,10 @@ bool CCanvas::on_scroll_event(GdkEventScroll *event)
     const int width  = allocation.get_width();
     const int height = allocation.get_height();
 
-    SPoint p0{event->x/dScale-dTrans.x/dScale, event->y/dScale-dTrans.y/dScale};
+    SPoint const p0{ (*event - dTrans)/dScale };
     dScale *= (event->delta_y>0)?.9:1.1; if (dScale<.01) dScale=.01;
-    SPoint p1{event->x/dScale-dTrans.x/dScale, event->y/dScale-dTrans.y/dScale};
-    dTrans.x -= (p0.x-p1.x)*dScale;
-    dTrans.y -= (p0.y-p1.y)*dScale;
+    SPoint const p1{ (*event - dTrans)/dScale };
+    dTrans -= (p0-p1)*dScale;
 
     queue_draw();
     return true;
@@ -610,7 +593,7 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
 	    cr->set_line_cap(Cairo::LINE_CAP_ROUND);
 	    cr->set_line_width(4);
 	    cr->set_source_rgba(.5,.5,.5,.5);
-	    Line(cr,G0,GPoint);
+	    Line(cr, G0, GPoint);
 
 	    if (nId == 1)
 		{
@@ -618,7 +601,7 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
 		    {
 		    auto const A{g_vGrundPunkte[0].GPoint(i)};
 		    auto const B{g_vGrundPunkte[1].GPoint(i)};
-		    Line(cr,A,B);
+		    Line(cr, A, B);
 		    if (i==0)
 			{
 			cr->set_source_rgb(0,0,0);
@@ -631,7 +614,7 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
 			{
 			auto const A{g_vGrundPunkte[0].GPoint(i)};
 			auto const B{g_oGrundpunkt.GPoint(i)};
-			Line(cr,A,B);
+			Line(cr, A, B);
 			if (i==0)
 			    {
 			    cr->set_source_rgb(0,0,0);
@@ -689,8 +672,21 @@ void draw_grundpunkt(Cairo::RefPtr<Cairo::Context> const & cr,
     draw_text(cr, G0.x,G0.y-32, sId+"0");
     }
 
+void draw_pol(Cairo::RefPtr<Cairo::Context> const & cr,
+	      SPoint const & pol)
+    {
+    if (!g_bShowHints) return;
+
+    cr->set_line_width(1);
+    cr->set_source_rgb(.9,.9,.9);
+    Circle(cr, pol, 12);
+    cr->set_source_rgb(0,0,0);
+    Ring(cr, pol, 12);
+    draw_text(cr, pol, "P12");
+    }
+
 void draw_poldreieck(Cairo::RefPtr<Cairo::Context> const & cr,
-	          VPolDreieck const & croPD, int nId)
+	             VPolDreieck const & croPD, int nId)
     {
     if (!g_bShowHints) return;
 
@@ -698,21 +694,19 @@ void draw_poldreieck(Cairo::RefPtr<Cairo::Context> const & cr,
     cr->set_line_width(1);
     cr->set_source_rgba(0,1,0,.5);
     Polygon(cr, croPD[0], croPD[1], croPD[2]);
-    cr->set_source_rgb(0,0,0);
-//    cr->set_line_width(2);
+    cr->set_source_rgb(.5,.5,.5);
     Line(cr, croPD[0], croPD[1], croPD[2], croPD[0]);
 
     SUmkreis tUmkreis = Umkreis( croPD[0], croPD[1], croPD[2] );
     cr->set_source_rgba(1,1,1,.25);
     Circle(cr, tUmkreis.MidPnt, tUmkreis.Radius);
-    cr->set_source_rgb(0,0,0);
+    cr->set_source_rgb(.5,.5,.5);
     Ring(cr, tUmkreis.MidPnt, tUmkreis.Radius);
 
     cr->set_source_rgb(0,0,0);
     draw_text(cr, croPD[0], "P12\n");
     draw_text(cr, croPD[1], "P13\n");
     draw_text(cr, croPD[2], "P23\n");
-//  draw_text(cr, croPD[0], "");
     }
 
 bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
@@ -736,8 +730,6 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	dTrans.y -= h0 - height/2; h0 = height/2;
 	}
 
-//a    cr->save();
-
     Cairo::Matrix matrix(1.0, 0.0, 0.0, 1.0, 0.0, 0.0);
     matrix.scale(dScale,dScale);
     matrix.translate(dTrans.x/dScale, dTrans.y/dScale);
@@ -755,6 +747,7 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	}
 
     cr->transform(matrix);
+
 /*
     cr->set_source_rgb(.8, .8, 1);
     cr->rectangle(-150, -150, 300, 300);
@@ -762,9 +755,13 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 */
 
 // static content
+    if (g_vEbenenLagen.size() == 2)
+	{
+	draw_pol(cr, { CalcPolpunkt(g_vEbenenLagen[1-1], g_vEbenenLagen[2-1]) });
+	}
+
     if (g_vEbenenLagen.size() == 3)
 	{
-//	cr->set_source_rgba(.0, 1.0, .0, .25);
 	g_vPolDreieck[0] = ( CalcPolpunkt(g_vEbenenLagen[1-1], g_vEbenenLagen[2-1]) );
 	g_vPolDreieck[1] = ( CalcPolpunkt(g_vEbenenLagen[1-1], g_vEbenenLagen[3-1]) );
 	g_vPolDreieck[2] = ( CalcPolpunkt(g_vEbenenLagen[2-1], g_vEbenenLagen[3-1]) );
@@ -852,7 +849,6 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	    default: break;
 	    }
 	}
-//a    cr->restore();
 
 /*
     cr->set_source_rgb(.8,.8,.0);
@@ -899,7 +895,7 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	auto const & B1 {g_vGrundPunkte[1].GPoint(0)};
 	auto const & B2 {g_vGrundPunkte[1].GPoint(1)};
 	auto const & B3 {g_vGrundPunkte[1].GPoint(2)};
-	auto const & B0{g_vGrundPunkte[1].G0()};
+	auto const & B0 {g_vGrundPunkte[1].G0()};
 
 	auto const GL = CalcDistance( A0, B0 );
 	auto const AL = CalcDistance( A0, A1 );
@@ -910,7 +906,6 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	    g_tPointA = SPoint{A0.x+AL*S, A0.y+AL*C};
 	auto const  d = CalcDistance( g_tPointA , B0 );
 
-//	auto const epsi = M_PI-CalcAlpha((g_tPointA.x-B0.x), -(g_tPointA.y-B0.y), d);
 	auto const epsi = CalcVectorSlope(g_tPointA, B0) -M_PI/2;
 
 	auto const beta = CalcAlpha(BL,CL,d); // 143,  86, CalcDistance( g_tPointA , B0 )  g:58, a:43
@@ -1010,7 +1005,6 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 
 	auto      dwe  = CalcVectorDiff(ep1, B1, ep2);
 
-
 	auto const lve = CalcDistance(B1, ep1);
 
 //	std::cout << " dw: " << dw/M_PI*180 << ",  wg: " << wg/M_PI*180 << ",  wb: " << wb/M_PI*180 << ",  lve: " << lve << '\n';
@@ -1037,9 +1031,7 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 		m_vSpurE2.emplace_back(SPointT{be2.x,be2.y,g_bCSplit});
 		}
 	    if (t0<=1.1) t0 += m_dAnimate;
-//	    std::cout << "i: " << t0*360 << " c: " << m_vSpurE1.size() << '\n';
 	    cr->set_source_rgb(0,0,0);
-
 
 	    cr->set_line_width(2);
 	    bool b;
@@ -1092,7 +1084,6 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 
     auto const dAniGui = (uiBaseLn-2*uiBaseWd)*m_dAnimate/(m_dAnimateMax-m_dAnimateMin);
 
-//    cr->rotate(g_dGVS);
 
     // Buttons
     int i{0}, nGrBtns{9};
@@ -1122,7 +1113,6 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 
 	    cr->rectangle( (a.x-dTrans.x)/dScale, (a.y-dTrans.y)/dScale, (a.w)/dScale, (a.h)/dScale );
 	    cr->fill();
-//	    cr->paint();
 	    }
 	else
 	    {
@@ -1137,12 +1127,8 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	    }
 	}
 
-
-
     cr->set_line_cap(Cairo::LINE_CAP_ROUND);
-
     cr->set_source_rgb(0,0,0);
-
     cr->set_line_width(uiBaseWd/dScale);
 
     cr->move_to((uiOffset-dTrans.x)/dScale, (uiOffset-dTrans.y         )/dScale);
@@ -1170,10 +1156,8 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
     if ( m_bShowMouse )
 	{
 	cr->set_source_rgb(.75,.75,0);
-	cr->arc(g.x,g.y,3,0,2*M_PI);
-	cr->fill();
+	Circle(cr,g,3);
 	}
 
     return true;
     }
-

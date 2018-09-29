@@ -12,7 +12,35 @@ struct SPoint
     template<typename T>
 	SPoint(T const & t) : x(t.x), y(t.y) {}
     double x{0}, y{0};
+
+    SPoint operator -= (SPoint const & p)
+        {
+	x-=p.x;
+	y-=p.y;
+        return *this;
+        }
     };
+
+inline SPoint operator - (SPoint const & p1, SPoint const & p2)
+    {
+    return {p1.x-p2.x, p1.y-p2.y};
+    }
+
+inline SPoint operator + (SPoint const & p1, SPoint const & p2)
+    {
+    return {p2.x+p1.x, p2.y+p1.y};
+    }
+
+inline SPoint operator / (SPoint const & p, double const & d)
+    {
+    return {p.x/d, p.y/d};
+    }
+
+inline SPoint operator * (SPoint const & p, double const & d)
+    {
+    return {p.x*d, p.y*d};
+    }
+
 
 struct SPointT
     {
@@ -58,10 +86,10 @@ using VGelenke     = std::vector<SPoint>;
 using A3Gelenke    = std::array<SPoint, 3>;
 
 
-SEbene FixedLenLine(SEbene & roL, double const & crnLenEbene, bool const & crbFirst = true);
-SPoint Intersection(SEbene const & E1, SEbene const & E2);
-SEbene Perpendicle(SEbene const & croLine);
-SPoint PointMirror(SPoint const & croPoint, SEbene const & croMirror);
+SEbene FixedLenLine(SLine & roL, double const & crnLen, bool const & crbFirst = true);
+SPoint Intersection(SLine const & E1, SLine const & E2);
+SEbene Perpendicle(SLine const & croLine);
+SPoint PointMirror(SPoint const & croPoint, SLine const & croMirror);
 SPoint CalcPolpunkt(SEbene const & E1, SEbene const & E2);
 SUmkreis Umkreis( SPoint const & P1, SPoint const & P2, SPoint const & P3 );
 
