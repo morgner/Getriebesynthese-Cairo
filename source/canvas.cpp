@@ -315,7 +315,7 @@ SPoint g{0.0, 0.0};
 bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
     {
 //    auto const e.x=event->x/dScale-dTrans.x/dScale;
-    auto const e{ (dTrans - SPointB{*event})/dScale };
+    auto const e{ (dTrans - SPoint{*event})/dScale };
 
 
     g = *event;
@@ -1033,8 +1033,8 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	    {
 	    if (360*t0+1 > m_vSpurE1.size())
 		{
-		m_vSpurE1.emplace_back(SPointB{be1.x,be1.y,g_bCSplit});
-		m_vSpurE2.emplace_back(SPointB{be2.x,be2.y,g_bCSplit});
+		m_vSpurE1.emplace_back(SPointT{be1.x,be1.y,g_bCSplit});
+		m_vSpurE2.emplace_back(SPointT{be2.x,be2.y,g_bCSplit});
 		}
 	    if (t0<=1.1) t0 += m_dAnimate;
 //	    std::cout << "i: " << t0*360 << " c: " << m_vSpurE1.size() << '\n';

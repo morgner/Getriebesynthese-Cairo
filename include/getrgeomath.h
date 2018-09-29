@@ -14,6 +14,16 @@ struct SPoint
     double x{0}, y{0};
     };
 
+struct SPointT
+    {
+    SPointT() = default;
+    SPointT(double const & x, double const & y, bool bSplit) : x(x), y(y), bCSplit(bSplit) {}
+    template<typename T>
+	SPointT(T const & t, bool bSplit) : x(t.x), y(t.y), bCSplit(bSplit) {}
+    double x{0}, y{0};
+    bool   bCSplit{false};
+    };
+
 struct SEbene
     {
     SPoint M() const { return { (x1+x2)/2,(y1+y2)/2 }; }
@@ -49,7 +59,11 @@ using A3Gelenke    = std::array<SPoint, 3>;
 
 
 SEbene FixedLenLine(SEbene & roL, double const & crnLenEbene, bool const & crbFirst = true);
-
+SPoint Intersection(SEbene const & E1, SEbene const & E2);
+SEbene Perpendicle(SEbene const & croLine);
+SPoint PointMirror(SPoint const & croPoint, SEbene const & croMirror);
+SPoint CalcPolpunkt(SEbene const & E1, SEbene const & E2);
+SUmkreis Umkreis( SPoint const & P1, SPoint const & P2, SPoint const & P3 );
 
 // __GETRGEOMATH_H
 #endif

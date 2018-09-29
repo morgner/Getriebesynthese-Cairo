@@ -8,19 +8,6 @@
 #include <gtkmm/drawingarea.h>
 
 
-
-
-struct SPointB
-    {
-    SPointB() = default;
-    template<typename T>
-	SPointB(T x, T y, bool b=false) : x(x), y(y), bCSplit(b)  {}
-    template<typename T>
-	SPointB(T const & t) : x(t.x), y(t.y) {}
-    double x{0}, y{0};
-    bool const bCSplit{false};
-    };
-
 struct SButton
     {
     double x,y,w,h;
@@ -31,7 +18,7 @@ struct SButton
 	     std::string it)
 	: x(ix), y(iy), w(iw), h(ih), text(it)
 	{}
-    bool Collision(SPointB const & p) const
+    bool Collision(SPoint const & p) const
 	{
 	return ( p.x > x && p.x < x+w && p.y > y && p.y < y+h );
 	}
@@ -109,8 +96,8 @@ class CCanvas : public Gtk::DrawingArea
 	    return true;
 	    }
 	// koppelkurveb
-	std::vector<SPointB> m_vSpurE1;
-	std::vector<SPointB> m_vSpurE2;
+	std::vector<SPointT> m_vSpurE1;
+	std::vector<SPointT> m_vSpurE2;
 
 	/// mouse parameters
 	enum class EPhase
