@@ -1,64 +1,22 @@
 #ifndef __GRUNDPUNKT_H
 #define __GRUNDPUNKT_H
 
+#include "getrgeomath.h"
 
 #include <vector>
 #include <array>
 #include <math.h>
 #include "te.h"
 
+#include <gtkmm/drawingarea.h>
+
 using namespace std::string_literals;
 
 using TRenderer = Cairo::RefPtr<Cairo::Context>;
 
 
-struct SPoint
-    {
-    SPoint() = default;
-    SPoint(double const & x, double const & y) : x(x), y(y) {}
-    template<typename T>
-	SPoint(T const & t) : x(t.x), y(t.y) {}
-    double x{0}, y{0};
-    };
 
-struct SEbene
-    {
-    SPoint M() const { return { (x1+x2)/2,(y1+y2)/2 }; }
-    double x1{0}, y1{0};
-    double x2{0}, y2{0};
-    };
 
-using SLine = SEbene;
-
-struct SUmkreis
-    {
-    double Radius;
-    SPoint MidPnt;
-    };
-
-using VEbenenLagen = std::vector<SEbene>;
-using VPolDreieck  = std::vector<SPoint>;
-using VGelenke     = std::vector<SPoint>;
-using A3Gelenke    = std::array<SPoint, 3>;
-
-SEbene FixedLenLine(SEbene & roL, double const & crnLenEbene, bool const & crbFirst = true)
-    {
-    auto const dx   { roL.x1 - roL.x2 };
-    auto const dy   { roL.y1 - roL.y2 };
-    auto const nLen { sqrt(dx*dx + dy*dy) };
-    auto const q    { (double)crnLenEbene / ((nLen!=0)?nLen:1) };
-    if (crbFirst)
-        {
-        roL.x2 = roL.x1 - dx*q;
-        roL.y2 = roL.y1 - dy*q;
-        }
-    else
-        {
-        roL.x1 = roL.x2 + dx*q;
-        roL.y1 = roL.y2 + dy*q;
-        }
-    return roL;
-    } // void FixedLenLine(...
 
 SPoint Intersection(SEbene const & E1, SEbene const & E2)
     {
@@ -162,6 +120,7 @@ class CGrundpunkt
 	SPoint const   P123() const { return {m_dX, m_dY}; }
 	SPoint const & G0() const { return m_tUK.MidPnt; }
 	SPoint const & GPoint( int const & i ) const { return m_a3Gelenke[i]; }
+
 
 	void UpdateAndShow( TRenderer const & cr, SPoint const & P123, VPolDreieck const & Poldreieck)
 	    {

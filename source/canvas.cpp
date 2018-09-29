@@ -46,11 +46,9 @@ bool   g_bCSplit{false};
 
 double dCollisonDistance{0.0}; // collision distance
 
-double dCollisionOffsetX{0}; // distance to a specified point
-double dCollisionOffsetY{0};
+SPoint dCollisionOffset{0.0, 0.0}; // distance to a specified point
 
-double dmosx{0}; // mouse offset scaled
-double dmosy{0};
+SPoint dmos{0.0, 0.0}; // mouse offset scaled
 
 auto CalcDistance(SPoint const & a, SPoint const & b)
     {
@@ -96,8 +94,8 @@ auto CalcVectorDiff(SPoint const & a, SPoint const & b, SPoint const & c)
 
 double MouseDistance( SPoint const & p, SPoint const & pMouse )
     {
-    dCollisionOffsetX = (p.x - pMouse.x)*dScale;
-    dCollisionOffsetY = (p.y - pMouse.y)*dScale;
+    dCollisionOffset.x = (p.x - pMouse.x)*dScale;
+    dCollisionOffset.y = (p.y - pMouse.y)*dScale;
     return CalcDistance(p, pMouse);
     }
 
@@ -117,8 +115,8 @@ SCollision MouseCollision(SPoint const & crtMousePoint)
 	    ac.eWhat  = SCollision::EWhat::A;
 	    ac.nIndex = cnt;
 	    ac.nSubIx = 0;
-	    dmosx = dCollisionOffsetX;
-	    dmosy = dCollisionOffsetY;
+	    dmos.x = dCollisionOffset.x;
+	    dmos.y = dCollisionOffset.y;
 	    return std::move(ac);
 	    }
 	}
@@ -130,8 +128,8 @@ SCollision MouseCollision(SPoint const & crtMousePoint)
 	    ac.eWhat  = SCollision::EWhat::Ebene;
 	    ac.nIndex = cnt;
 	    ac.nSubIx = 0;
-	    dmosx = dCollisionOffsetX;
-	    dmosy = dCollisionOffsetY;
+	    dmos.x = dCollisionOffset.x;
+	    dmos.y = dCollisionOffset.y;
 	    break;
 	    }
 	if ( MouseDistance({a.x2, a.y2}, crtMousePoint) < dCollisonDistance )
@@ -139,8 +137,8 @@ SCollision MouseCollision(SPoint const & crtMousePoint)
 	    ac.eWhat  = SCollision::EWhat::Ebene;
 	    ac.nIndex = cnt;
 	    ac.nSubIx = 1;
-	    dmosx = dCollisionOffsetX;
-	    dmosy = dCollisionOffsetY;
+	    dmos.x = dCollisionOffset.x;
+	    dmos.y = dCollisionOffset.y;
 	    break;
 	    }
 	SPoint m = a.M();
@@ -149,8 +147,8 @@ SCollision MouseCollision(SPoint const & crtMousePoint)
 	    ac.eWhat  = SCollision::EWhat::Ebene;
 	    ac.nIndex = cnt;
 	    ac.nSubIx = 2;
-	    dmosx = dCollisionOffsetX;
-	    dmosy = dCollisionOffsetY;
+	    dmos.x = dCollisionOffset.x;
+	    dmos.y = dCollisionOffset.y;
 	    break;
 	    }
 	++cnt;
@@ -163,14 +161,42 @@ SCollision MouseCollision(SPoint const & crtMousePoint)
 	    ac.eWhat  = SCollision::EWhat::Grundpunkt;
 	    ac.nIndex = cnt;
 	    ac.nSubIx = 0;
-	    dmosx = dCollisionOffsetX;
-	    dmosy = dCollisionOffsetY;
+	    dmos.x = dCollisionOffset.x;
+	    dmos.y = dCollisionOffset.y;
 	    break;
 	    }
 	++cnt;
 	}
 
     return std::move(ac);
+    }
+
+void CCanvas::MovePunktA(double const & x,double const & y)
+    {
+    SPoint const & A0 = g_vGrundPunkte[0].G0();
+    auto w = CalcVectorSlope(A0, {x,y}) + M_PI/2;
+         t = w / (2*M_PI) ;
+    }
+
+void CCanvas::MoveEbenenPunkt(double const & x,double const & y,double const & L)
+    {
+    SEbene & er = g_vEbenenLagen[g_tCollision.nIndex];
+
+    SEbene tL{};
+    if ( g_tCollision.nSubIx == 0 ) tL = {x,y,er.x2,er.y2};
+    if ( g_tCollision.nSubIx == 1 ) tL = {er.x1,er.y1,x,y};
+    if ( g_tCollision.nSubIx == 2 )
+	{
+	SPoint m = er.M();
+	auto dx = m.x - x;
+	auto dy = m.y - y;
+	er = {er.x1-dx,er.y1-dy,er.x2-dx,er.y2-dy};
+	}
+    else
+	{
+	FixedLenLine(tL, L, g_tCollision.nSubIx == 0);
+	er = {tL.x1,tL.y1,tL.x2,tL.y2};
+	}
     }
 
 void ExportSCAD( SPoint const & A0,
@@ -336,15 +362,15 @@ bool CCanvas::on_motion_notify_event(GdkEventMotion *event)
 		    break;
 
 		case SCollision::EWhat::A:
-		    MovePunktA(e.x+dmosx/dScale, e.y+dmosy/dScale);
+		    MovePunktA(e.x+dmos.x/dScale, e.y+dmos.y/dScale);
 		    break;
 
 		case SCollision::EWhat::Ebene:
-		    MoveEbenenPunkt(e.x+dmosx/dScale, e.y+dmosy/dScale, m_nLenEbene);
+		    MoveEbenenPunkt(e.x+dmos.x/dScale, e.y+dmos.y/dScale, m_nLenEbene);
 		    break;
 
 		case SCollision::EWhat::Grundpunkt:
-		    g_vGrundPunkte[g_tCollision.nIndex].Update({e.x+dCollisionOffsetX/dScale, e.y+dCollisionOffsetY/dScale});
+		    g_vGrundPunkte[g_tCollision.nIndex].Update({e.x+dCollisionOffset.x/dScale, e.y+dCollisionOffset.y/dScale});
 		    break;
 		}
 	    }
@@ -452,34 +478,6 @@ bool CCanvas::on_scroll_event(GdkEventScroll *event)
 
     queue_draw();
     return true;
-    }
-
-void CCanvas::MoveEbenenPunkt(double const & x,double const & y,double const & L)
-    {
-    SEbene & er = g_vEbenenLagen[g_tCollision.nIndex];
-
-    SEbene tL{};
-    if ( g_tCollision.nSubIx == 0 ) tL = {x,y,er.x2,er.y2};
-    if ( g_tCollision.nSubIx == 1 ) tL = {er.x1,er.y1,x,y};
-    if ( g_tCollision.nSubIx == 2 )
-	{
-	SPoint m = er.M();
-	auto dx = m.x - x;
-	auto dy = m.y - y;
-	er = {er.x1-dx,er.y1-dy,er.x2-dx,er.y2-dy};
-	}
-    else
-	{
-	FixedLenLine(tL, L, g_tCollision.nSubIx == 0);
-	er = {tL.x1,tL.y1,tL.x2,tL.y2};
-	}
-    }
-
-void CCanvas::MovePunktA(double const & x,double const & y)
-    {
-    SPoint const & A0 = g_vGrundPunkte[0].G0();
-    auto w = CalcVectorSlope(A0, {x,y}) + M_PI/2;
-         t = w / (2*M_PI) ;
     }
 
 template<typename P>

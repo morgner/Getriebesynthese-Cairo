@@ -1,21 +1,14 @@
 #ifndef __CANVAS_H
 #define __CANVAS_H
 
-#include <string>
+#include "getrgeomath.h"
+
+// #include <string>
 #include <gtkmm.h>
 #include <gtkmm/drawingarea.h>
 
-struct SCollision
-    {
-    enum class EWhat {
-	none,
-	A,
-	Ebene,
-	Grundpunkt,
-    } eWhat;
-    int nIndex; // 1,2,3 = E1, E2, E3 ; 1,2 =G1, G2
-    int nSubIx; // 1,2,3 = P1, P2, Pm
-    };
+
+
 
 struct SPointB
     {
@@ -125,7 +118,7 @@ class CCanvas : public Gtk::DrawingArea
 	    EbenenLagen,
 	    GrundPunkte,
 	    Collision,
-	    } m_ePhase = EPhase::EbenenLagen;
+	    } m_ePhase {EPhase::EbenenLagen};
 
 	double x1{0};
 	double y1{0};
