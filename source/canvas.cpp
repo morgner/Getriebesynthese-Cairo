@@ -754,6 +754,11 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
     cr->fill();
 */
 
+    if ( !g_vEbenenLagen.size() )
+	{
+	draw_text(cr, {0,0}, "Start with the first Ebenenlage by Click&Drag", 1);
+	}
+
 // static content
     if (g_vEbenenLagen.size() == 2)
 	{
