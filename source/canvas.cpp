@@ -496,6 +496,7 @@ template<typename S, typename... P>
 	{
 	 MoveTo(cr, tPoint1);
 	(LineTo(cr, tPoints), ...);
+	 LineTo(cr, tPoint1);
 	cr->fill();
 	}
 
