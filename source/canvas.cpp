@@ -715,8 +715,8 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
     const int width  = allocation.get_width();
     const int height = allocation.get_height();
 
-    static auto w0 = width/2;
-    static auto h0 = height/2;
+    static double w0 = width/2;
+    static double h0 = height/2;
 
     if ( false == bTransInitialized )
 	{
@@ -753,11 +753,6 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
     cr->rectangle(-150, -150, 300, 300);
     cr->fill();
 */
-
-    if ( !g_vEbenenLagen.size() )
-	{
-	draw_text(cr, {0,0}, "Start with the first Ebenenlage by Click&Drag", 1);
-	}
 
 // static content
     if (g_vEbenenLagen.size() == 2)
@@ -1162,6 +1157,18 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	{
 	cr->set_source_rgb(.75,.75,0);
 	Circle(cr,g,3);
+	}
+
+    cr->set_source_rgba(.25,.25,.25,.75);
+    static double tvp{h0-20};
+    switch ( g_vEbenenLagen.size() )
+	{
+	case 0: draw_text(cr, {0,0}, "Start with the first Ebenenlage by Click&Drag", 1); break;
+	case 1: draw_text(cr, {0,tvp}, "Now the second Ebenenlage the same way", 1); break;
+	case 2: draw_text(cr, {0,tvp}, "And finaly the third", 1); break;
+	case 3: if ( g_vGrundPunkte.size() == 0 )
+		    draw_text(cr, {0,tvp}, "Now fiddle with the two Grundpunkte", 1);
+		break;
 	}
 
     return true;
