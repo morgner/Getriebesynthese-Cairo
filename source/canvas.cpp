@@ -41,21 +41,23 @@ auto CalcDistance(SPoint const & a, SPoint const & b)
 
 auto CalcAlpha(double const & a, double const & b, double const & c)
     {
+//    std::cout << "a: " << a << ", b: " << b << ", c: " << c << " ,  ";
     auto cosinus = (pow(b,2)+pow(c,2)-pow(a,2)) / (2*b*c);
     if ((cosinus<-1)||(cosinus>1))
 	{
-//	std::cout << "cos(alfa): " << cosinus << ", ";
 	return 0.0;
 	}
 
-//    if (s<0) return (2*M_PI) - (acos( cosinus ));
     return acos( cosinus );
     }
 
 auto CalcVectorSlope(SPoint const & a, SPoint const & b)
     {
     auto const dba = SPoint{ b.x-a.x, b.y-a.y };
-    auto       sba = atan(dba.y / ((abs(dba.x)<.00001)?.00001:dba.x));
+    double dbax{dba.x};
+    if ( dba.x < 0 && dba.x > -.00001) dbax = -.00001;
+    if ( dba.x > 0 && dba.x <  .00001) dbax =  .00001;
+    auto       sba = atan(dba.y / dbax);
 
     if      ( (dba.x>0) && (dba.y<0) )
 	sba = -sba;
@@ -912,9 +914,18 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 	auto const beta = CalcAlpha(BL,CL,d); // 143,  86, CalcDistance( g_tPointA , B0 )  g:58, a:43
 	auto const gama = CalcAlpha(CL,BL,d); //  86, 143, CalcDistance( g_tPointA , B0 )
 
-	std::cout << "e: " << epsi/M_PI*180 << ", b: " << beta/M_PI*180 << ", g: " << gama/M_PI*180 << '\n';
+//	std::cout << "e: " << epsi/M_PI*180 << ", b: " << beta/M_PI*180 << ", g: " << gama/M_PI*180 << '\n';
 
-//	if ( beta*gama == 0.0 ) return true;
+	static bool zero {false};
+	if ( beta == 0 && gama == 0 )
+	    {
+	    if ( !zero ) m_bDirectionLeft = !m_bDirectionLeft;
+	    zero = true;
+	    }
+	else
+	    {
+	    zero = false;
+	    }
 
 	SPoint g_tPointB;
 	SPoint pab;
@@ -1026,7 +1037,7 @@ bool CCanvas::on_draw(Cairo::RefPtr<Cairo::Context> const & cr)
 
 	if ( m_bWithTraces )
 	    {
-	    if (360*m_tAnimStep+1 > m_vSpurE1.size())
+	    if (360*m_tAnimStep+1 > m_vSpurE1.size() && !zero)
 		{
 		m_vSpurE1.emplace_back(SPointT{be1.x,be1.y,g_bCSplit});
 		m_vSpurE2.emplace_back(SPointT{be2.x,be2.y,g_bCSplit});
